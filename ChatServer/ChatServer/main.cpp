@@ -13,7 +13,7 @@ int main()
 
 	GetSystemInfo(&_SysInfo);
 	
-	if ((_Retval = _Server.ServerStart(pIP, 6000, 
+	if ((_Retval = _Server.ServerStart(pIP, SERVERPORT,
 				_SysInfo.dwNumberOfProcessors * 2, true, 
 				MAX_CLIENT_NUMBER)) == false)
 	{

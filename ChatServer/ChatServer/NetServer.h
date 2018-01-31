@@ -11,7 +11,7 @@
 #include "LockFreeStack.h"
 #include "LockFreeQueue.h"
 
-#define		SERVERPORT				12002
+#define		SERVERPORT				12001
 #define		MAX_CLIENT_NUMBER		40000
 #define		MAX_WORKER_THREAD		10
 #define		TIMEOUT_TIME			30000

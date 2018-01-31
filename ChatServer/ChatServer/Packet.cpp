@@ -10,8 +10,10 @@ CPacket::CPacket() :
 {
 	ZeroMemory(&m_chBuffer, static_cast<int>(en_PACKETDEFINE::BUFFER_SIZE));
 	m_iDataSize = 0;
+//	m_pWritePos = m_chBuffer;
+	m_pReadPos = m_chBuffer;
 	m_pWritePos = m_chBuffer + static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
-	m_pReadPos = m_chBuffer + static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
+//	m_pReadPos = m_chBuffer + static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
 	m_lHeaderSetFlag = false;
 	m_iRefCount = 0;
 }
@@ -24,8 +26,10 @@ void CPacket::Clear()
 {
 	ZeroMemory(&m_chBuffer, static_cast<int>(en_PACKETDEFINE::BUFFER_SIZE));
 	m_iDataSize = 0;
+//	m_pWritePos = m_chBuffer;
+	m_pReadPos = m_chBuffer;
 	m_pWritePos = m_chBuffer + static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
-	m_pReadPos = m_chBuffer + static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
+//	m_pReadPos = m_chBuffer + static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
 	m_lHeaderSetFlag = false;
 	m_iRefCount = 0;
 	m_iBufferSize = static_cast<int>(en_PACKETDEFINE::BUFFER_SIZE);
@@ -61,22 +65,24 @@ void CPacket::AddRef()
 
 void CPacket::PushData(WCHAR* pSrc, int iSize)
 {
-	if (m_pEndPos - m_pWritePos < iSize)
+	int Size = iSize * 2;
+	if (m_pEndPos - m_pWritePos < Size)
 		throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR),
-			iSize, int(m_pEndPos - m_pWritePos));
-	memcpy_s(m_pWritePos, iSize, pSrc, iSize);
-	m_pWritePos += iSize * 2;
-	m_iDataSize += iSize * 2;
+			Size, int(m_pEndPos - m_pWritePos));
+	memcpy_s(m_pWritePos, Size, pSrc, Size);
+	m_pWritePos += Size;
+	m_iDataSize += Size;
 }
 
 void CPacket::PopData(WCHAR* pDest, int iSize)
 {
-	if (m_iDataSize < iSize)
+	int Size = iSize * 2;
+	if (m_iDataSize < Size)
 		throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::POP_ERR),
-			iSize, m_iDataSize);
-	memcpy_s(pDest, iSize, m_pReadPos, iSize);
-	m_pReadPos += iSize * 2;
-	m_iDataSize -= iSize * 2;
+			Size, m_iDataSize);
+	memcpy_s(pDest, Size, m_pReadPos, Size);
+	m_pReadPos += Size;
+	m_iDataSize -= Size;
 }
 
 void CPacket::PushData(char *pSrc, int iSize)
@@ -119,7 +125,7 @@ void CPacket::PopData(int iSize)
 
 void CPacket::SetHeader(char *pHeader)
 {
-	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, false, true))
+	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, true, false))
 		return;
 	memcpy_s(m_chBuffer, static_cast<int>(en_PACKETDEFINE::HEADER_SIZE), 
 		pHeader, static_cast<int>(en_PACKETDEFINE::HEADER_SIZE));
@@ -127,7 +133,7 @@ void CPacket::SetHeader(char *pHeader)
 
 void CPacket::SetHeader_CustomHeader(char *pHeader, int iCustomHeaderSize)
 {
-	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, false, true))
+	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, true, false))
 		return;
 	int iSize = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE) - iCustomHeaderSize;
 	memcpy_s(&m_chBuffer[iSize], static_cast<int>(en_PACKETDEFINE::HEADER_SIZE), 
@@ -136,7 +142,7 @@ void CPacket::SetHeader_CustomHeader(char *pHeader, int iCustomHeaderSize)
 
 void CPacket::SetHeader_CustomShort(unsigned short shHeader)
 {
-	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, false, true))
+	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, true, false))
 		return;
 	memcpy_s(&m_chBuffer, static_cast<int>(en_PACKETDEFINE::SHORT_HEADER_SIZE), 
 		&shHeader, static_cast<int>(en_PACKETDEFINE::SHORT_HEADER_SIZE));
@@ -144,17 +150,19 @@ void CPacket::SetHeader_CustomShort(unsigned short shHeader)
 
 void CPacket::EnCode()
 {
-	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, false, true))
+	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, true, false))
 		return;
 
 	st_PACKET_HEADER Header;
 	Header.shLen = m_iDataSize;
 
+//	m_iDataSize += sizeof(st_PACKET_HEADER);
+
 	int iCheckSum = 0;
-	BYTE *pPtr = (BYTE*)m_chBuffer;
+	BYTE *pPtr = (BYTE*)&m_chBuffer[5];
 
 	for (int iCnt = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE); 
-		iCnt < m_iDataSize; iCnt++)
+		iCnt < m_iDataSize + sizeof(st_PACKET_HEADER); iCnt++)
 	{
 		iCheckSum += *pPtr;
 		pPtr++;
@@ -163,9 +171,15 @@ void CPacket::EnCode()
 	Header.CheckSum = Header.CheckSum ^ Header.RandKey ^ 
 		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^ 
 		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
+	for (int iCnt = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
+		iCnt < m_iDataSize + sizeof(st_PACKET_HEADER); iCnt++)
+		m_chBuffer[iCnt] = m_chBuffer[iCnt] ^ Header.RandKey ^
+		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
+		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
 	Header.RandKey = Header.RandKey ^ 
 		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^ 
 		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
+
 	memcpy_s(&m_chBuffer, static_cast<int>(en_PACKETDEFINE::HEADER_SIZE), 
 		&Header, static_cast<int>(en_PACKETDEFINE::HEADER_SIZE));
 
@@ -188,14 +202,14 @@ bool CPacket::DeCode(st_PACKET_HEADER * pInHeader)
 		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
 		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
 	for (int iCnt = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
-		iCnt < pInHeader->shLen; iCnt++)
+		iCnt < pInHeader->shLen + sizeof(st_PACKET_HEADER); iCnt++)
 	{
 		m_chBuffer[iCnt] = m_chBuffer[iCnt] ^ pInHeader->RandKey ^ 
 			static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
 			static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
 	}
 	int iCheckSum = 0;
-	BYTE *pPtr = (BYTE*)m_chBuffer;
+	BYTE *pPtr = (BYTE*)&m_chBuffer[5];
 	for (int iCnt = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE); iCnt < m_iDataSize; iCnt++)
 	{
 		iCheckSum += *pPtr;

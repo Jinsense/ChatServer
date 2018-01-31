@@ -251,6 +251,8 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 	pSession->bRelease = TRUE;
 	closesocket(pSession->sock);
 
+	OnClientLeave(pSession->iSessionKey);
+
 	while (0 < pSession->SendQ.GetUseCount())
 	{
 		CPacket *_pPacket;
@@ -584,23 +586,38 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 {
 	pSession->RecvQ.Enqueue(dwTransfered);
  
-	while (0 <= pSession->RecvQ.GetUseSize())
+	while (0 < pSession->RecvQ.GetUseSize())
 	{
 		CPacket::st_PACKET_HEADER _Header;
 		CPacket *_pPacket = CPacket::Alloc();
 		
-		pSession->RecvQ.Dequeue((char*)_pPacket->GetBufferPtr(), static_cast<int>(CPacket::en_PACKETDEFINE::HEADER_SIZE));
-		pSession->RecvQ.Dequeue((char*)_pPacket->GetWritePtr(), _pPacket->GetPacketLen());
-		_pPacket->PushData(_pPacket->GetPacketLen());
+		pSession->RecvQ.Peek((char*)&_Header, sizeof(CPacket::st_PACKET_HEADER));
+
+		pSession->RecvQ.Dequeue((char*)_pPacket->GetBufferPtr(), _Header.shLen + sizeof(CPacket::st_PACKET_HEADER));
+
+		if (static_cast<int>(CPacket::en_PACKETDEFINE::PACKET_CODE) != _Header.byCode || 10000 < _Header.shLen)
+		{
+			shutdown(pSession->sock, SD_BOTH);
+			_pPacket->Free();
+			return;
+		}
+
+		_pPacket->PushData(_Header.shLen + sizeof(CPacket::st_PACKET_HEADER));
 
 		if (false == _pPacket->DeCode((CPacket::st_PACKET_HEADER*)_pPacket->GetBufferPtr()))
 		{
 			shutdown(pSession->sock, SD_BOTH);
+			_pPacket->Free();
 			return;
 		}
 		
+		_pPacket->PopData(sizeof(CPacket::st_PACKET_HEADER));
+
 		if (false == OnRecv(pSession->iSessionKey, _pPacket))
+		{
+			_pPacket->Free();
 			return;
+		}
 
 		_pPacket->Free();
 	}

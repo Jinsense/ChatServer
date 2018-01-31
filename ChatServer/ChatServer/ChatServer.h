@@ -30,8 +30,13 @@ typedef struct st_UPDATE_MESSAGE
 
 typedef struct st_SECTOR_POS
 {
-	short shX;
-	short shY;
+	st_SECTOR_POS()
+	{
+		shX = 10000;
+		shY = 10000;
+	}
+	WORD shX;
+	WORD shY;
 }POS;
 
 typedef struct st_SECTOR_AROUND
@@ -82,11 +87,11 @@ public:
 
 	PLAYER*	FindPlayer(unsigned __int64 iClientNo);
 	bool	PacketProc(unsigned __int64 iClientNo, CPacket *pPacket);
-	bool	InsertSectorPlayer(short shX, short shY, unsigned __int64 ClientNo);
-	bool	DeleteSectorPlayer(short shX, short shY, unsigned __int64 ClientNo);
-	void	GetSectorAround(short shX, short shY, SECTORAROUND *pSectorAround);
-	bool	SendSector(short shX, short shY, CPacket *pPacket);
-	bool	SendSectorAround(short shX, short shY, CPacket *pPacket);
+	bool	InsertSectorPlayer(WORD shX, WORD shY, unsigned __int64 ClientNo);
+	bool	DeleteSectorPlayer(WORD shX, WORD shY, unsigned __int64 ClientNo);
+	void	GetSectorAround(WORD shX, WORD shY, SECTORAROUND *pSectorAround);
+	bool	SendSector(WORD shX, WORD shY, CPacket *pPacket);
+	bool	SendSectorAround(WORD shX, WORD shY, CPacket *pPacket);
 	bool	BroadCast(CPacket *pPacket);
 
 	UPMSG*	GetMessageQ();

@@ -29,7 +29,8 @@ public:
 		BYTE	RandKey;
 		BYTE	CheckSum;
 		st_PACKET_HEADER() :
-			byCode(static_cast<int>(en_PACKETDEFINE::PACKET_CODE)), RandKey(rand() % 255) {}
+			byCode(static_cast<int>(en_PACKETDEFINE::PACKET_CODE)), 
+			RandKey(rand() % 255), CheckSum(NULL), shLen(NULL){}
 	};
 #pragma pack(pop)
 
@@ -87,7 +88,7 @@ public:
 	}
 	void	EnCode();
 	bool	DeCode(st_PACKET_HEADER * pInHeader);
-	int		GetPacketLen() { return m_chBuffer[1]; }
+
 public:
 	CPacket& operator=(CPacket &Packet);
 

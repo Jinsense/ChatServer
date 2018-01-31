@@ -67,6 +67,8 @@ void CChatServer::OnError(int iErrorCode, WCHAR *pError)
 
 bool CChatServer::OnRecv(unsigned __int64 iClientNo, CPacket *pPacket)
 {
+	m_iRecvPacketTPS++;
+
 	st_SessionInfo Info;
 	Info.iSessionKey = iClientNo;
 	UPMSG *pMsg = m_UpdateMessagePool->Alloc();
@@ -94,7 +96,7 @@ void CChatServer::MonitorThread_Update()
 		localtime_s(_t, &_timer);
 		if (true == m_bMonitorFlag)
 		{
-			wprintf(L"\n[%d/%d/%d %d:%d:%d]\n\n\n\n", _t->tm_year + 1900, _t->tm_mon + 1,
+			wprintf(L"\n[%d/%d/%d %d:%d:%d]\n\n", _t->tm_year + 1900, _t->tm_mon + 1,
 				_t->tm_mday, _t->tm_hour, _t->tm_min, _t->tm_sec);
 			wprintf(L"[ConnectSession			:	%I64d]\n", m_iConnectClient);
 			wprintf(L"[MemoryPool_AllocCount		:	%I64d]\n", CPacket::GetAllocPool());
@@ -110,7 +112,9 @@ void CChatServer::MonitorThread_Update()
 			wprintf(L"[LoginSessionKey		:	%I64d]\n", 0);
 			wprintf(L"[Accept_Total			:	%I64d]\n", m_iAcceptTotal);
 			wprintf(L"[Accept_TPS			:	%I64d]\n", m_iAcceptTPS);
-			wprintf(L"[Update_TPS			:	%I64d]\n\n", m_iUpdateTPS);
+			wprintf(L"[Update_TPS			:	%I64d]\n", m_iUpdateTPS);
+			wprintf(L"[SendPacket_TPS			:	%I64d]\n", m_iSendPacketTPS);
+			wprintf(L"[RecvPacket_TPS			:	%I64d]\n\n", m_iRecvPacketTPS);
 
 			//	세션miss - 미사용
 			wprintf(L"[SessionMiss			:	%I64d]\n", 0);
@@ -200,7 +204,7 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 				break;
 			}
 
-			if(pPlayer->ClientPos.shX != -1 && pPlayer->ClientPos.shY != -1)
+			if(pPlayer->ClientPos.shX != 10000 && pPlayer->ClientPos.shY != 10000)
 				DeleteSectorPlayer(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, iClientNo);
 
 			pPlayer->ClientPos.shX = shX;
@@ -238,8 +242,8 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 			WORD Len;
 			*pPacket >> Len;
 
-			WCHAR * pMsg = new WCHAR[Len / 2];
-			pPacket->PopData(pMsg, Len / 2);
+			WCHAR * pMsg = new WCHAR[Len / 2];			
+			pPacket->PopData(pMsg, Len / 2);			
 
 			CPacket *pNewPacket = CPacket::Alloc();
 			WORD Type = en_PACKET_CS_CHAT_RES_MESSAGE;
@@ -250,9 +254,11 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 			*pNewPacket << Len;
 			pNewPacket->PushData(pMsg, Len / 2);
 
-			SendPacket(iClientNo, pNewPacket);
-//			주변섹터전송으로 수정
+//			SendPacket(iClientNo, pNewPacket);
+			SendSectorAround(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, pNewPacket);
+
 			pNewPacket->Free();
+			delete[] pMsg;
 		}
 	}
 	break;
@@ -271,21 +277,24 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 	return true;
 }
 
-bool CChatServer::InsertSectorPlayer(short shX, short shY, unsigned __int64 iClientNo)
+bool CChatServer::InsertSectorPlayer(WORD shX, WORD shY, unsigned __int64 iClientNo)
 {
 	m_Sector[shY][shX].push_back(iClientNo);
 	return true;
 }
 
-bool CChatServer::DeleteSectorPlayer(short shX, short shY, unsigned __int64 iClientNo)
+bool CChatServer::DeleteSectorPlayer(WORD shX, WORD shY, unsigned __int64 iClientNo)
 {
-	m_Sector[shY][shX].remove(iClientNo);
+	if (10000 == shX && 10000 == shY)
+		return false;
+	else
+		m_Sector[shY][shX].remove(iClientNo);
 	return true;
 }
 
-void CChatServer::GetSectorAround(short shX, short shY, SECTORAROUND *pSectorAround)
+void CChatServer::GetSectorAround(WORD shX, WORD shY, SECTORAROUND *pSectorAround)
 {
-	short shCntX, shCntY;
+	WORD shCntX, shCntY;
 
 	pSectorAround->iCount = 0;
 
@@ -307,7 +316,7 @@ void CChatServer::GetSectorAround(short shX, short shY, SECTORAROUND *pSectorAro
 	return;
 }
 
-bool CChatServer::SendSector(short shX, short shY, CPacket *pPacket)
+bool CChatServer::SendSector(WORD shX, WORD shY, CPacket *pPacket)
 {
 	list<unsigned __int64>::iterator iter;
 	for (iter = m_Sector[shY][shX].begin(); iter != m_Sector[shY][shX].end(); iter++)
@@ -317,7 +326,7 @@ bool CChatServer::SendSector(short shX, short shY, CPacket *pPacket)
 	return true;
 }
 
-bool CChatServer::SendSectorAround(short shX, short shY, CPacket *pPacket)
+bool CChatServer::SendSectorAround(WORD shX, WORD shY, CPacket *pPacket)
 {
 	SECTORAROUND AroundSector;
 	GetSectorAround(shX, shY, &AroundSector);
@@ -355,6 +364,7 @@ void CChatServer::UpdateThread_Update()
 		WaitForSingleObject(m_Event, INFINITE);
 		while (0 < m_UpdateMessageQ.GetUseCount())
 		{
+			m_iUpdateTPS++;
 			UPMSG *pMsg = GetMessageQ();
 			if (nullptr == pMsg)
 				continue;
@@ -373,6 +383,7 @@ void CChatServer::UpdateThread_Update()
 			break;
 			case UPDATE_LEAVE:
 			{
+				//	Player 없을 경우 예외처리 필요함
 				PLAYER *pPlayer = FindPlayer(pMsg->ClientInfo.iSessionKey);
 				if (pPlayer->ClientPos.shX != -1 && pPlayer->ClientPos.shY != -1)
 					DeleteSectorPlayer(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, pPlayer->ClientNo);
@@ -399,7 +410,7 @@ void CChatServer::HeartBeatThread_Update()
 {
 	while (!m_bClose)
 	{
-
+		Sleep(1000);
 	}
 	return;
 }
