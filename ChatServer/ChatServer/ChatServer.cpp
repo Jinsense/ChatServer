@@ -385,7 +385,7 @@ void CChatServer::UpdateThread_Update()
 			{
 				//	Player 없을 경우 예외처리 필요함
 				PLAYER *pPlayer = FindPlayer(pMsg->ClientInfo.iSessionKey);
-				if (pPlayer->ClientPos.shX != -1 && pPlayer->ClientPos.shY != -1)
+				if (pPlayer->ClientPos.shX != 10000 && pPlayer->ClientPos.shY != 10000)
 					DeleteSectorPlayer(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, pPlayer->ClientNo);
 				m_Playermap.erase(pMsg->ClientInfo.iSessionKey);
 				m_PlayerPool->Free(pPlayer);
