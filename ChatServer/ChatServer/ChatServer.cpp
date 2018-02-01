@@ -204,7 +204,7 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 				break;
 			}
 
-			if(pPlayer->ClientPos.shX != 10000 && pPlayer->ClientPos.shY != 10000)
+			if(10000 != pPlayer->ClientPos.shX && 10000 != pPlayer->ClientPos.shY)
 				DeleteSectorPlayer(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, iClientNo);
 
 			pPlayer->ClientPos.shX = shX;
@@ -256,8 +256,8 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 
 //			SendPacket(iClientNo, pNewPacket);
 			SendSectorAround(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, pNewPacket);
-
 			pNewPacket->Free();
+
 			delete[] pMsg;
 		}
 	}
@@ -294,16 +294,16 @@ bool CChatServer::DeleteSectorPlayer(WORD shX, WORD shY, unsigned __int64 iClien
 
 void CChatServer::GetSectorAround(WORD shX, WORD shY, SECTORAROUND *pSectorAround)
 {
-	WORD shCntX, shCntY;
+	short shCntX, shCntY;
 
 	pSectorAround->iCount = 0;
 
-	for (shCntY = 0; shCntY < 3; shCntY++)
+	for (shCntY = -1; shCntY < 2; shCntY++)
 	{
 		if (shY + shCntY < 0 || shY + shCntY >= SECTOR_Y_MAX)
 			continue;
 
-		for (shCntX = 0; shCntX < 3; shCntX++)
+		for (shCntX = -1; shCntX < 2; shCntX++)
 		{
 			if (shX + shCntX < 0 || shX + shCntX >= SECTOR_X_MAX)
 				continue;
@@ -321,7 +321,9 @@ bool CChatServer::SendSector(WORD shX, WORD shY, CPacket *pPacket)
 	list<unsigned __int64>::iterator iter;
 	for (iter = m_Sector[shY][shX].begin(); iter != m_Sector[shY][shX].end(); iter++)
 	{
+		pPacket->AddRef();
 		SendPacket(*iter, pPacket);
+		pPacket->Free();
 	}
 	return true;
 }
@@ -353,7 +355,7 @@ UPMSG* CChatServer::GetMessageQ()
 	if (0 == m_UpdateMessageQ.GetUseCount())
 		return nullptr;
 	UPMSG *pMsg;
-	m_UpdateMessageQ.Dequeue(&pMsg);
+	m_UpdateMessageQ.Dequeue(pMsg);
 	return pMsg;
 }
 
@@ -364,10 +366,11 @@ void CChatServer::UpdateThread_Update()
 		WaitForSingleObject(m_Event, INFINITE);
 		while (0 < m_UpdateMessageQ.GetUseCount())
 		{
-			m_iUpdateTPS++;
 			UPMSG *pMsg = GetMessageQ();
 			if (nullptr == pMsg)
 				continue;
+
+			m_iUpdateTPS++;
 
 			switch (pMsg->iMsgType)
 			{
@@ -383,8 +386,9 @@ void CChatServer::UpdateThread_Update()
 			break;
 			case UPDATE_LEAVE:
 			{
-				//	Player 없을 경우 예외처리 필요함
 				PLAYER *pPlayer = FindPlayer(pMsg->ClientInfo.iSessionKey);
+				if (nullptr == pPlayer)
+					break;
 				if (pPlayer->ClientPos.shX != 10000 && pPlayer->ClientPos.shY != 10000)
 					DeleteSectorPlayer(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, pPlayer->ClientNo);
 				m_Playermap.erase(pMsg->ClientInfo.iSessionKey);

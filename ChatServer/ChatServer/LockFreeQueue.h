@@ -6,134 +6,135 @@
 template<class Type>
 class CLockFreeQueue
 {
-	struct st_NODE
+	typedef struct st_MemoryBlock
 	{
-		st_NODE				*pNext;
-		Type				Data;
+		st_MemoryBlock()
+		{
+			pNextblock = nullptr;
+		}
+		st_MemoryBlock * pNextblock;
+		Type data;
+	}BLOCK;
 
-		st_NODE() :
-			pNext(nullptr),
-			Data(NULL) {}
-	};
-	struct st_TOP
+	typedef struct st_FreeNode
 	{
-		st_NODE				*pNode;
-		unsigned __int64	iCount;
-
-		st_TOP() :
-			pNode(nullptr),
-			iCount(NULL) {}
-	};
+		st_MemoryBlock * pTopnode;
+		LONG64 uniquenum;
+	}TOP;
 	
 public:
-	CLockFreeQueue();
-	~CLockFreeQueue();
-
-	void Enqueue(Type Data);
-	bool Dequeue(Type *pData);
-
-	long GetUseCount();
-	
-private:
-	long				m_lUseCount;
-	st_TOP				*m_pFront;
-	st_TOP				*m_pRear;
-	CMemoryPool<st_NODE>	m_FreeList;
-};
-
-template<class Type>
-inline CLockFreeQueue<Type>::CLockFreeQueue()
-{
-	m_lUseCount = 0;
-
-	m_pFront = (st_TOP*)_aligned_malloc(sizeof(st_TOP), 16);
-	m_pFront->pNode = m_FreeList.Alloc();
-	m_pFront->pNode->pNext = nullptr;
-	m_pFront->iCount = 0;
-
-	m_pRear = (st_TOP*)_aligned_malloc(sizeof(st_TOP), 16);
-	m_pRear->pNode = m_pFront->pNode;
-	m_pRear->iCount = 0;
-}
-
-template<class Type>
-inline CLockFreeQueue<Type>::~CLockFreeQueue()
-{
-	st_NODE* _pNode = m_pFront->pNode;
-	while (_pNode)
+	CLockFreeQueue()
 	{
-		st_NODE *_pNext = _pNode->pNext;
-		m_FreeList.Free(_pNode);
-		_pNode = _pNext;
-		InterlockedDecrement(&m_lUseCount);
+		_queueusecount = 0;
+		_queuememorypool = new CMemoryPool<BLOCK>;
+
+		_pHead = (TOP*)_aligned_malloc(sizeof(TOP), 16);
+		_pHead->pTopnode = _queuememorypool->Alloc();
+		_pHead->pTopnode->pNextblock = nullptr;
+		_pHead->uniquenum = 0;
+
+		_pTail = (TOP*)_aligned_malloc(sizeof(TOP), 16);
+		_pTail->pTopnode = _pHead->pTopnode;
+		_pTail->uniquenum = 0;
 	}
-	_aligned_free(m_pFront);
-	_aligned_free(m_pRear);
-}
 
-template<class Type>
-inline void CLockFreeQueue<Type>::Enqueue(Type Data)
-{
-	st_NODE *_pNewNode = m_FreeList.Alloc();
-	_pNewNode->pNext = nullptr;
-	_pNewNode->Data = Data;
-
-	st_TOP _NewRear;
-	_NewRear.pNode = m_pRear->pNode;
-	_NewRear.iCount = m_pRear->iCount;
-	while (1)
+	virtual ~CLockFreeQueue()
 	{
-		if (nullptr == _NewRear.pNode->pNext)
+		while (_pHead->pTopnode != _pTail->pTopnode)
 		{
-			if (nullptr == InterlockedCompareExchangePointer((PVOID*)&_NewRear.pNode->pNext,
-				_pNewNode, nullptr))
+			BLOCK * pNode = _pHead->pTopnode;
+			_pHead->pTopnode = pNode->pNextblock;
+			delete pNode;
+		}
+
+		_queuememorypool->Free(_pHead->pTopnode);
+		_aligned_free(_pHead);
+		_aligned_free(_pTail);
+		delete _queuememorypool;
+	}
+
+	void Enqueue(Type InData)
+	{
+		BLOCK * pNode = _queuememorypool->Alloc();
+		pNode->pNextblock = nullptr;
+		pNode->data = InData;
+
+		TOP tail;
+		tail.uniquenum = InterlockedIncrement64(&_pTail->uniquenum);
+		while (1)
+		{
+			tail.pTopnode = _pTail->pTopnode;
+			BLOCK * pNext = tail.pTopnode->pNextblock;
+
+			if (NULL == pNext)
 			{
-				InterlockedCompareExchange128((LONG64*)m_pRear, _NewRear.iCount + 1, 
-											(LONG64)_pNewNode, (LONG64*)&_NewRear);
+				if (nullptr == InterlockedCompareExchangePointer((PVOID*)&tail.pTopnode->pNextblock,
+					pNode, pNext))
+				{
+					InterlockedCompareExchange128((LONG64*)_pTail, tail.uniquenum,
+						(LONG64)pNode, (LONG64*)&tail);
+					break;
+				}
+			}
+			else
+			{
+				InterlockedCompareExchange128((LONG64*)_pTail, tail.uniquenum,
+					(LONG64)tail.pTopnode->pNextblock, (LONG64*)&tail);
+			}
+		}
+		InterlockedIncrement(&_queueusecount);
+		return;
+	}
+
+	bool Dequeue(Type &OutData)
+	{
+		if (InterlockedDecrement(&_queueusecount) < 0)
+		{
+			InterlockedIncrement(&_queueusecount);
+			OutData = nullptr;
+			return false;
+		}
+
+		TOP head;
+		TOP tail;
+		head.uniquenum = InterlockedIncrement64(&(_pHead->uniquenum));
+		while (1)
+		{
+			head.pTopnode = _pHead->pTopnode;
+			tail.pTopnode = _pTail->pTopnode;
+			BLOCK * pNode = head.pTopnode->pNextblock;
+			if (nullptr == pNode)
+				continue;
+
+			if (head.pTopnode == tail.pTopnode)
+			{
+				if (0 == InterlockedCompareExchange128((LONG64*)_pTail, tail.uniquenum,
+					(LONG64)tail.pTopnode->pNextblock, (LONG64*)&tail))
+					continue;
+			}
+
+			OutData = pNode->data;
+			if (1 == InterlockedCompareExchange128((LONG64*)_pHead, head.uniquenum,
+				(LONG64)head.pTopnode->pNextblock, (LONG64*)&head))
+			{
+				_queuememorypool->Free(head.pTopnode);
 				break;
 			}
 		}
-		InterlockedCompareExchange128((LONG64*)m_pRear, _NewRear.iCount + 1, 
-									(LONG64)_NewRear.pNode->pNext, (LONG64*)&_NewRear);
+		return true;
 	}
-	InterlockedIncrement(&m_lUseCount);
-}
 
-template<class Type>
-inline bool CLockFreeQueue<Type>::Dequeue(Type *pData)
-{
-	if (InterlockedDecrement(&m_lUseCount) < 0)
-	{
-		InterlockedIncrement(&m_lUseCount);
-		return false;
-	}
-	st_TOP _Front;
-	_Front.pNode = m_pFront->pNode;
-	_Front.iCount = m_pFront->iCount;
-	while (1)
-	{
-		st_NODE *_pNext = _Front.pNode->pNext;
-		if (nullptr == _pNext)
-		{
-			_Front.pNode = m_pFront->pNode;
-			_Front.iCount = m_pFront->iCount;
-			continue;
-		}
-		*pData = _pNext->Data;
-		if (InterlockedCompareExchange128((LONG64*)m_pFront, _Front.iCount + 1, 
-										(LONG64)_Front.pNode->pNext, (LONG64*)&_Front))
-		{
-			m_FreeList.Free(_Front.pNode);
-			break;
-		}
-	}
-	return true;
-}
+	long GetUseCount() { return _queueusecount; }
+	long GetQueueMemoryPoolUseCount() { return _queuememorypool->GetUseCount(); }
+	long GetQueueMemoryPoolAllocCount() { return _queuememorypool->GetAllocCount(); }
+	
+private:
+	long				_queueusecount;
+	CMemoryPool<BLOCK> * _queuememorypool;
+	TOP * _pHead;
+	TOP * _pTail;
+};
 
-template<class Type>
-inline LONG CLockFreeQueue<Type>::GetUseCount()
-{
-	return m_lUseCount;
-}
+
 
 #endif _CHATSERVER_MEMORY_QUEUE_H_

@@ -14,7 +14,7 @@ int main()
 	GetSystemInfo(&_SysInfo);
 	
 	if ((_Retval = _Server.ServerStart(pIP, SERVERPORT,
-				_SysInfo.dwNumberOfProcessors * 2, true, 
+				MAX_WORKER_THREAD, true, 
 				MAX_CLIENT_NUMBER)) == false)
 	{
 		wprintf(L"[Server :: Server_Start] Error\n");

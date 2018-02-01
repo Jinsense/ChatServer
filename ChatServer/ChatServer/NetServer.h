@@ -17,7 +17,7 @@
 #define		TIMEOUT_TIME			30000
 
 #define		MAX_WSABUF_NUMBER		100
-#define		MAX_QUEUE_SIZE			10000
+#define		MAX_QUEUE_SIZE			1000
 
 #define		SET_INDEX(Index, SessionKey)		Index = Index << 48; SessionKey = Index | SessionKey;
 #define		GET_INDEX(Index, SessionKey)		Index = SessionKey >> 48;
@@ -62,7 +62,7 @@ struct st_Session
 		RecvQ(MAX_QUEUE_SIZE),
 		PacketQ(MAX_QUEUE_SIZE),
 		lIOCount(0),
-		lSendFlag(true){}
+		lSendFlag(false){}
 };
 
 class CNetServer

@@ -57,7 +57,7 @@ bool CNetServer::ServerStart(const WCHAR *pOpenIP, int iPort, int iMaxWorkerThre
 		pSessionArray[i].sock = INVALID_SOCKET;
 		pSessionArray[i].lSendCount = 0;
 		pSessionArray[i].iSessionKey = NULL;
-		pSessionArray[i].lSendFlag = true;
+		pSessionArray[i].lSendFlag = false;
 		pSessionArray[i].bLoginFlag = false;
 		pSessionArray[i].bRelease = false;
 	}
@@ -182,14 +182,16 @@ bool CNetServer::SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket)
 		m_iSendPacketTPS++;
 		pPacket->AddRef();
 		pPacket->EnCode();
-//		pPacket->SetHeader_CustomShort(pPacket->GetDataSize());
 		pSessionArray[_iIndex].SendQ.Enqueue(pPacket);
+
+//		pPacket->SetHeader_CustomShort(pPacket->GetDataSize());
 
 		if (0 == InterlockedDecrement(&pSessionArray[_iIndex].lIOCount))
 		{
 			ClientRelease(&pSessionArray[_iIndex]);
 			return false;
 		}
+
 		SendPost(&pSessionArray[_iIndex]);
 		return true;
 	}
@@ -256,16 +258,17 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 	while (0 < pSession->SendQ.GetUseCount())
 	{
 		CPacket *_pPacket;
-		pSession->SendQ.Dequeue(&_pPacket);
+		pSession->SendQ.Dequeue(_pPacket);
 		_pPacket->Free();
 	}
 
 	while (0 < pSession->PacketQ.GetUseSize())
 	{
 		CPacket *_pPacket;
-		pSession->PacketQ.Peek((char*)&_pPacket,sizeof(CPacket*));
+		pSession->PacketQ.Dequeue((char*)&_pPacket, sizeof(CPacket*));
+//		pSession->PacketQ.Peek((char*)&_pPacket,sizeof(CPacket*));
 		_pPacket->Free();
-		pSession->PacketQ.Dequeue(sizeof(CPacket*));
+//		pSession->PacketQ.Dequeue(sizeof(CPacket*));
 	}
 
 	pSession->bLoginFlag = false;
@@ -356,13 +359,22 @@ void CNetServer::AcceptThread_Update()
 		pSessionArray[*_iSessionNum].sock = clientSock;
 		pSessionArray[*_iSessionNum].RecvQ.Clear();
 		pSessionArray[*_iSessionNum].PacketQ.Clear();
-		pSessionArray[*_iSessionNum].lSendFlag = TRUE;
+		if (0 != pSessionArray[*_iSessionNum].SendQ.GetUseCount())
+		{
+			while (0 < pSessionArray[*_iSessionNum].SendQ.GetUseCount())
+			{
+				CPacket *_pPacket;
+				pSessionArray[*_iSessionNum].SendQ.Dequeue(_pPacket);
+				_pPacket->Free();
+			}
+		}
+		pSessionArray[*_iSessionNum].lSendFlag = false;
 		pSessionArray[*_iSessionNum].lSendCount = 0;
 		InterlockedIncrement(&m_iConnectClient);
-		pSessionArray[*_iSessionNum].bLoginFlag = TRUE;
+		pSessionArray[*_iSessionNum].bLoginFlag = true;
 		pSessionArray[*_iSessionNum].Info.iSessionKey = 
 			pSessionArray[*_iSessionNum].iSessionKey;
-		pSessionArray[*_iSessionNum].bRelease = FALSE;
+		pSessionArray[*_iSessionNum].bRelease = false;
 
 		InterlockedIncrement(&pSessionArray[*_iSessionNum].lIOCount);
 		CreateIoCompletionPort((HANDLE)clientSock, m_hIOCP, 
@@ -525,13 +537,13 @@ void CNetServer::SendPost(st_Session *pSession)
 	DWORD _dwRetval;
 	do 
 	{
-		if (false == InterlockedCompareExchange(&pSession->lSendFlag, false, true))		
+		if (true == InterlockedCompareExchange(&pSession->lSendFlag, true, false))		
 			return;		
 
 		if (0 == pSession->SendQ.GetUseCount())
 		{
-			InterlockedExchange(&pSession->lSendFlag, true);
-			continue;
+			InterlockedExchange(&pSession->lSendFlag, false);
+			return;
 		}
 		ZeroMemory(&pSession->SendOver, sizeof(pSession->SendOver));
 		
@@ -542,10 +554,18 @@ void CNetServer::SendPost(st_Session *pSession)
 		if (_iUseSize > MAX_WSABUF_NUMBER)
 		{
 			_lBufNum = MAX_WSABUF_NUMBER;
-			pSession->lSendCount = MAX_WSABUF_NUMBER;
+			InterlockedExchangeAdd(&pSession->lSendCount, MAX_WSABUF_NUMBER);
+//			pSession->lSendCount = MAX_WSABUF_NUMBER;
 			for (int i = 0; i < MAX_WSABUF_NUMBER; i++)
 			{
-				pSession->SendQ.Dequeue(&_pPacket);
+				bool _bCheck;
+				_bCheck = pSession->SendQ.Dequeue(_pPacket);
+				if (false == _bCheck)
+				{
+					InterlockedExchangeAdd(&pSession->lSendCount, -_iUseSize);
+					InterlockedExchange(&pSession->lSendFlag, false);
+					return;
+				}
 				pSession->PacketQ.Enqueue((char*)&_pPacket, sizeof(CPacket*));
 				_Buf[i].buf = _pPacket->GetBufferPtr();
 				_Buf[i].len = _pPacket->GetPacketSize();
@@ -554,10 +574,18 @@ void CNetServer::SendPost(st_Session *pSession)
 		else
 		{
 			_lBufNum = _iUseSize;
-			pSession->lSendCount = _iUseSize;
+			InterlockedExchangeAdd(&pSession->lSendCount, _iUseSize);
+//			pSession->lSendCount = _iUseSize;
 			for (int i = 0; i < _iUseSize; i++)
 			{	
-				pSession->SendQ.Dequeue(&_pPacket);
+				bool _bCheck;
+				_bCheck = pSession->SendQ.Dequeue(_pPacket);
+				if (false == _bCheck)
+				{
+					InterlockedExchangeAdd(&pSession->lSendCount, -_iUseSize);
+					InterlockedExchange(&pSession->lSendFlag, false);
+					return;
+				}
 				pSession->PacketQ.Enqueue((char*)&_pPacket, sizeof(CPacket*));
 				_Buf[i].buf = _pPacket->GetBufferPtr();
 				_Buf[i].len = _pPacket->GetPacketSize();
@@ -627,14 +655,17 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 void CNetServer::CompleteSend(st_Session *pSession, DWORD dwTransfered)
 {
 	CPacket *_pPacket[MAX_WSABUF_NUMBER];
+	long _lSendCount = pSession->lSendCount;
+
 	pSession->PacketQ.Peek((char*)&_pPacket, sizeof(CPacket*) *pSession->lSendCount);
-	for (int i = 0; i < pSession->lSendCount; i++)
+	for (int i = 0; i < _lSendCount; i++)
 	{
 		_pPacket[i]->Free();
 		pSession->PacketQ.Dequeue(sizeof(CPacket*));
+		InterlockedDecrement(&pSession->lSendCount);
 	}
 
-	InterlockedExchange(&pSession->lSendFlag, true);
+	InterlockedExchange(&pSession->lSendFlag, false);
 
 	SendPost(pSession);
 }
