@@ -96,17 +96,19 @@ void CChatServer::MonitorThread_Update()
 		localtime_s(_t, &_timer);
 		if (true == m_bMonitorFlag)
 		{
-			wprintf(L"\n[%d/%d/%d %d:%d:%d]\n\n", _t->tm_year + 1900, _t->tm_mon + 1,
+			wprintf(L"[%d/%d/%d %d:%d:%d]\n\n", _t->tm_year + 1900, _t->tm_mon + 1,
 				_t->tm_mday, _t->tm_hour, _t->tm_min, _t->tm_sec);
 			wprintf(L"[ConnectSession			:	%I64d]\n", m_iConnectClient);
 			wprintf(L"[MemoryPool_AllocCount		:	%I64d]\n", CPacket::GetAllocPool());
 			wprintf(L"[MemoryPool_UseCount		:	%I64d]\n\n", CPacket::GetUsePool());
 
 			wprintf(L"[UpdateThreadMSG_AllocCount	:	%I64d]\n", m_UpdateMessagePool->GetAllocCount());
-			wprintf(L"[UpdateThreadQ_UseCount		:	%I64d]\n\n", m_UpdateMessageQ.GetUseCount());
+			wprintf(L"[UpdateThreadQ_UseCount		:	%I64d]\n", m_UpdateMessageQ.GetUseCount());
+			wprintf(L"[UpdateThreadQ_PoolUseCount	:	%I64d]\n", m_UpdateMessageQ.GetQueueMemoryPoolUseCount());
+			wprintf(L"[UpdateThreadQ_PoolAllocCount	:	%I64d]\n\n", m_UpdateMessageQ.GetQueueMemoryPoolAllocCount());
 
 			wprintf(L"[Player_AllocCount		:	%I64d]\n", m_PlayerPool->GetAllocCount());
-			wprintf(L"[Player_UseCount		:	%I64d]\n\n", m_PlayerPool->GetUseCount());
+			wprintf(L"[Player_UseCount		:	%I64d]\n", m_PlayerPool->GetUseCount());
 
 			//	로그인세션키 - 미사용	
 			wprintf(L"[LoginSessionKey		:	%I64d]\n", 0);
@@ -332,11 +334,12 @@ bool CChatServer::SendSectorAround(WORD shX, WORD shY, CPacket *pPacket)
 {
 	SECTORAROUND AroundSector;
 	GetSectorAround(shX, shY, &AroundSector);
-
+	pPacket->AddRef();
 	for (int iCnt = 0; iCnt < AroundSector.iCount; iCnt++)
 	{
 		SendSector(AroundSector.Around[iCnt].shX, AroundSector.Around[iCnt].shY, pPacket);
 	}
+	pPacket->Free();
 	return true;
 }
 

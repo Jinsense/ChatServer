@@ -10,6 +10,8 @@
 #include "MemoryPool_TLS.h"
 #include "LockFreeStack.h"
 #include "LockFreeQueue.h"
+#include "Log.h"
+
 
 #define		SERVERPORT				12001
 #define		MAX_CLIENT_NUMBER		40000
@@ -171,6 +173,8 @@ public:
 	unsigned __int64		m_iSendPacketTPS;
 	unsigned __int64		m_iConnectClient;
 	bool					m_bMonitorFlag;
+
+	CSystemLog				*m_Log;
 };
 
 #endif _CHATSERVER_IOCP_NETSERVER_H_
