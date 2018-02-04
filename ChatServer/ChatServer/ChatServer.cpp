@@ -415,9 +415,21 @@ void CChatServer::UpdateThread_Update()
 
 void CChatServer::HeartBeatThread_Update()
 {
-	while (!m_bClose)
+//	while (!m_bClose)
 	{
 		Sleep(1000);
+		ULONG64 currenttick = GetTickCount64();
+		ULONG64 playertick;
+		map<unsigned __int64, PLAYER*>::iterator iter;
+		for (iter = m_Playermap.begin(); iter != m_Playermap.end(); iter++)
+		{
+			if (currenttick < iter->second->LastRecvPacket)
+				continue;
+			playertick = currenttick - iter->second->LastRecvPacket;
+			
+			if(TIMEOUT_TIME < playertick)
+				Disconnect(iter->first);
+		}
 	}
 	return;
 }

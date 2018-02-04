@@ -29,6 +29,7 @@ CNetServer::CNetServer()
 	m_iConnectClient = 0;
 
 	m_Log = m_Log->GetInstance();
+	InitializeSRWLock(&m_srw);
 }
 
 CNetServer::~CNetServer()
@@ -363,7 +364,8 @@ void CNetServer::AcceptThread_Update()
 		InterlockedIncrement(&m_iConnectClient);
 		if (pSessionArray[*_iSessionNum].bLoginFlag == TRUE)
 		{
-//			m_Log->Log();
+			m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM, 
+				const_cast<WCHAR*>(L"LoginFlag is TRUE"));
 			shutdown(clientSock, SD_BOTH);
 //			closesocket(clientSock);
 //			ClientRelease(&pSessionArray[*_iSessionNum]);
@@ -737,11 +739,15 @@ bool CNetServer::SetMonitorMode(bool bFlag)
 unsigned __int64* CNetServer::GetIndex()
 {
 	unsigned __int64 *_iIndex = nullptr;
+	AcquireSRWLockExclusive(&m_srw);
 	SessionStack.Pop(&_iIndex);
+	ReleaseSRWLockExclusive(&m_srw);
 	return _iIndex;
 }
 
 void CNetServer::PutIndex(unsigned __int64 iIndex)
 {
+	AcquireSRWLockExclusive(&m_srw);
 	SessionStack.Push(&pIndex[iIndex]);
+	ReleaseSRWLockExclusive(&m_srw);
 }

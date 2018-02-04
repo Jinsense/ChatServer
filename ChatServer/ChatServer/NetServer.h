@@ -175,6 +175,7 @@ public:
 	bool					m_bMonitorFlag;
 
 	CSystemLog				*m_Log;
+	SRWLOCK					m_srw;
 };
 
 #endif _CHATSERVER_IOCP_NETSERVER_H_

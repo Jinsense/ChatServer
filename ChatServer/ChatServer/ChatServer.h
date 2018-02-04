@@ -56,7 +56,7 @@ typedef struct st_PLAYER
 		SessionKey[0] = NULL;
 		ClientPort = NULL;
 		DisconnectChatRecv = false;
-		LastRecvPacket = NULL;
+		LastRecvPacket = GetTickCount64();
 	}
 	unsigned __int64	ClientNo;
 	__int64		AccountNo;
