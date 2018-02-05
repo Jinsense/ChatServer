@@ -31,7 +31,15 @@ CRingBuffer::~CRingBuffer()
 void CRingBuffer::Initialize(int iBufferSize)
 {
 	m_pBuffer = new char[iBufferSize];
+	ZeroMemory(m_pBuffer, iBufferSize);
 	m_iBufferSize = iBufferSize;
+}
+
+void CRingBuffer::Clear()
+{
+	ZeroMemory(m_pBuffer, m_iBufferSize);
+	m_iFront = 0;
+	m_iRear = 0;
 }
 
 int CRingBuffer::GetBufferSize()

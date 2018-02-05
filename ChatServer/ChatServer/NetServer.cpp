@@ -264,6 +264,7 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 	if (false == InterlockedCompareExchange128((LONG64*)pIOCompare, 0,
 		0, (LONG64*)&_CheckFlag))
 	{
+		shutdown(pSession->sock,SD_BOTH);
 		return false;
 	}
 
@@ -579,7 +580,7 @@ void CNetServer::SendPost(st_Session *pSession)
 				_bCheck = pSession->SendQ.Dequeue(_pPacket);
 				if (false == _bCheck)
 				{
-					InterlockedExchangeAdd(&pSession->lSendCount, -i);
+					InterlockedExchangeAdd(&pSession->lSendCount, -(MAX_WSABUF_NUMBER - i));
 					InterlockedExchange(&pSession->lSendFlag, false);
 					return;
 				}
@@ -650,7 +651,8 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 
 		if (static_cast<int>(CPacket::en_PACKETDEFINE::PACKET_CODE) != _Header.byCode || 10000 < _Header.shLen)
 		{
-			shutdown(pSession->sock, SD_BOTH);
+			ClientRelease(pSession);
+//			shutdown(pSession->sock, SD_BOTH);
 			_pPacket->Free();
 			return;
 		}
@@ -659,7 +661,8 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 
 		if (false == _pPacket->DeCode((CPacket::st_PACKET_HEADER*)_pPacket->GetBufferPtr()))
 		{
-			shutdown(pSession->sock, SD_BOTH);
+			ClientRelease(pSession);
+//			shutdown(pSession->sock, SD_BOTH);
 			_pPacket->Free();
 			return;
 		}
@@ -671,12 +674,7 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 
 		_pPacket->PopData(sizeof(CPacket::st_PACKET_HEADER));
 
-		if (false == OnRecv(pSession->iSessionKey, _pPacket))
-		{
-			_pPacket->Free();
-			return;
-		}
-
+		OnRecv(pSession->iSessionKey, _pPacket);
 		_pPacket->Free();
 	}
 	RecvPost(pSession);
@@ -744,15 +742,15 @@ bool CNetServer::SetMonitorMode(bool bFlag)
 unsigned __int64* CNetServer::GetIndex()
 {
 	unsigned __int64 *_iIndex = nullptr;
-	AcquireSRWLockExclusive(&m_srw);
+//	AcquireSRWLockExclusive(&m_srw);
 	SessionStack.Pop(&_iIndex);
-	ReleaseSRWLockExclusive(&m_srw);
+//	ReleaseSRWLockExclusive(&m_srw);
 	return _iIndex;
 }
 
 void CNetServer::PutIndex(unsigned __int64 iIndex)
 {
-	AcquireSRWLockExclusive(&m_srw);
+//	AcquireSRWLockExclusive(&m_srw);
 	SessionStack.Push(&pIndex[iIndex]);
-	ReleaseSRWLockExclusive(&m_srw);
+//	ReleaseSRWLockExclusive(&m_srw);
 }

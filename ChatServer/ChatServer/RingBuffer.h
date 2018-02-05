@@ -12,7 +12,7 @@ public:
 	void	Initialize(int iBufferSize);
 	void	Lock();
 	void	Unlock();
-	void	Clear() { m_iFront = m_iRear; }
+	void	Clear();
 	char*	GetBufferPtr() { return m_pBuffer; }
 	char*	GetWriteBufferPtr() { return &m_pBuffer[m_iRear]; }
 	char*	GetReadBufferPtr() { return &m_pBuffer[m_iFront]; }

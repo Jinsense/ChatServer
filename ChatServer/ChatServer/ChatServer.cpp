@@ -257,7 +257,7 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 			if (10000 < Len)
 			{
 				m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
-					const_cast<WCHAR*>(L"Pakcet Len is wrong"));
+					const_cast<WCHAR*>(L"CHAT_REQ_MESSAGE - Pakcet Len is wrong"));
 				break;
 			}
 

@@ -19,7 +19,7 @@
 #define		TIMEOUT_TIME			30000
 
 #define		MAX_WSABUF_NUMBER		100
-#define		MAX_QUEUE_SIZE			1000
+#define		MAX_QUEUE_SIZE			2000
 
 #define		SET_INDEX(Index, SessionKey)		Index = Index << 48; SessionKey = Index | SessionKey;
 #define		GET_INDEX(Index, SessionKey)		Index = SessionKey >> 48;
