@@ -7,8 +7,7 @@
 
 CRingBuffer::CRingBuffer()
 {
-	m_pCS = &m_CS;
-	InitializeCriticalSection(m_pCS);
+	InitializeSRWLock(&m_srw);
 	m_iFront = 0;
 	m_iRear = 0;
 }
@@ -16,15 +15,13 @@ CRingBuffer::CRingBuffer()
 CRingBuffer::CRingBuffer(int iBufferSize)
 {
 	Initialize(iBufferSize);
-	m_pCS = &m_CS;
-	InitializeCriticalSection(m_pCS);
+	InitializeSRWLock(&m_srw);
 	m_iFront = 0;
 	m_iRear = 0;
 }
 
 CRingBuffer::~CRingBuffer()
 {
-	DeleteCriticalSection(m_pCS);
 	delete[] m_pBuffer;
 }
 
@@ -94,7 +91,7 @@ int CRingBuffer::GetNotBrokenPopSize()
 
 int CRingBuffer::Enqueue(const char *pData, int iDataSize)
 {
-	EnterCriticalSection(&m_CS);
+	AcquireSRWLockExclusive(&m_srw);
 
 	int _iDestPos = m_iRear + iDataSize;
 	int _iFront = m_iFront;
@@ -144,13 +141,13 @@ int CRingBuffer::Enqueue(const char *pData, int iDataSize)
 		m_iRear += iDataSize;
 	}
 
-	LeaveCriticalSection(&m_CS);
+	ReleaseSRWLockExclusive(&m_srw);
 	return iDataSize;
 }
 
 int CRingBuffer::Dequeue(char *pData, int iDataSize)
 {
-	EnterCriticalSection(&m_CS);
+	AcquireSRWLockExclusive(&m_srw);
 
 	int _iDsetPos = m_iFront + iDataSize;
 	int _iRear = m_iRear;
@@ -185,13 +182,13 @@ int CRingBuffer::Dequeue(char *pData, int iDataSize)
 		}
 	}
 
-	LeaveCriticalSection(&m_CS);
+	ReleaseSRWLockExclusive(&m_srw);
 	return iDataSize;
 }
 
 int CRingBuffer::Enqueue(int iDataSize)
 {
-	EnterCriticalSection(&m_CS);
+	AcquireSRWLockExclusive(&m_srw);
 
 	int _iDestPos = m_iRear + iDataSize;
 	int _iFront = m_iFront;
@@ -235,13 +232,13 @@ int CRingBuffer::Enqueue(int iDataSize)
 		m_iRear += iDataSize;
 	}
 
-	LeaveCriticalSection(&m_CS);
+	ReleaseSRWLockExclusive(&m_srw);
 	return iDataSize;
 }
 
 int CRingBuffer::Dequeue(int iDataSize)
 {
-	EnterCriticalSection(&m_CS);
+	AcquireSRWLockExclusive(&m_srw);
 
 	int iDestPos = m_iFront + iDataSize;
 	int _iRear = m_iRear;
@@ -271,7 +268,7 @@ int CRingBuffer::Dequeue(int iDataSize)
 		}
 	}
 
-	LeaveCriticalSection(&m_CS);
+	ReleaseSRWLockExclusive(&m_srw);
 	return iDataSize;
 }
 
@@ -295,14 +292,4 @@ int CRingBuffer::Peek(char *pData, int iDataSize)
 		}
 	}
 	return iDataSize;
-}
-
-void CRingBuffer::Lock()
-{
-	EnterCriticalSection(m_pCS);
-}
-
-void CRingBuffer::Unlock()
-{
-	LeaveCriticalSection(m_pCS);
 }

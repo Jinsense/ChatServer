@@ -89,6 +89,7 @@ public:
 	void	EnCode();
 	bool	DeCode(st_PACKET_HEADER * pInHeader);
 
+	__int64 GetRefCount() { return m_iRefCount; }
 public:
 	CPacket& operator=(CPacket &Packet);
 

@@ -11,6 +11,7 @@
 #include "LockFreeStack.h"
 #include "LockFreeQueue.h"
 #include "Log.h"
+#include "Dump.h"
 
 
 #define		SERVERPORT				12001
@@ -47,7 +48,7 @@ struct st_IO_RELEASE_COMPARE
 struct st_Session
 {
 	bool				bLoginFlag;
-	bool				bRelease;
+	long				lRelease;
 	long				lIOCount;
 	long				lSendFlag;
 	long				lSendCount;

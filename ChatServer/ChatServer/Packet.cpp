@@ -156,8 +156,6 @@ void CPacket::EnCode()
 	st_PACKET_HEADER Header;
 	Header.shLen = m_iDataSize;
 
-//	m_iDataSize += sizeof(st_PACKET_HEADER);
-
 	int iCheckSum = 0;
 	BYTE *pPtr = (BYTE*)&m_chBuffer[5];
 
@@ -210,7 +208,8 @@ bool CPacket::DeCode(st_PACKET_HEADER * pInHeader)
 	}
 	int iCheckSum = 0;
 	BYTE *pPtr = (BYTE*)&m_chBuffer[5];
-	for (int iCnt = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE); iCnt < m_iDataSize; iCnt++)
+	for (int iCnt = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
+		iCnt < static_cast<int>(en_PACKETDEFINE::HEADER_SIZE) + pInHeader->shLen; iCnt++)
 	{
 		iCheckSum += *pPtr;
 		pPtr++;

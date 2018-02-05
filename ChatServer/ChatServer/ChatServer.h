@@ -9,8 +9,8 @@
 
 using namespace std;
 
-#define		SECTOR_Y_MAX	50
-#define		SECTOR_X_MAX	50
+#define		SECTOR_Y_MAX	100
+#define		SECTOR_X_MAX	100
 
 #define		UPDATE_JOIN			1
 #define		UPDATE_LEAVE		2

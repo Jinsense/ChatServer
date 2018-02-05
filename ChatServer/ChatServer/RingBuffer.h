@@ -10,8 +10,6 @@ public:
 	~CRingBuffer();
 public:
 	void	Initialize(int iBufferSize);
-	void	Lock();
-	void	Unlock();
 	void	Clear();
 	char*	GetBufferPtr() { return m_pBuffer; }
 	char*	GetWriteBufferPtr() { return &m_pBuffer[m_iRear]; }
@@ -32,8 +30,8 @@ private:
 	int		m_iBufferSize;
 	int		m_iFront;
 	int		m_iRear;
-	CRITICAL_SECTION	m_CS;
-	PCRITICAL_SECTION	m_pCS;
+
+	SRWLOCK	m_srw;
 };
 
 #endif _CHATSERVER_NETWORK_RINGBUFFER_H_

@@ -208,10 +208,10 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 				break;
 			}
 
-			if (50 <= shX || 50 <= shY)
+			if (100 <= shX || 100 <= shY)
 			{
 				m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
-					const_cast<WCHAR*>(L"REQ_SECTOR_MOVE - Pos Wrong"));
+					const_cast<WCHAR*>(L"REQ_SECTOR_MOVE - Pos Wrong [X : %d, Y : %d]"), shX, shY);
 				Disconnect(iClientNo);
 				break;
 			}
