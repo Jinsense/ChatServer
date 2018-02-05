@@ -118,7 +118,7 @@ public:
 
 public:
 	static		CMemoryPool<CPacket> *m_pMemoryPool;
-
+	st_PACKET_HEADER	m_header;
 private:
 	char		m_chBuffer[static_cast<int>(en_PACKETDEFINE::BUFFER_SIZE)];
 	char		*m_pEndPos;

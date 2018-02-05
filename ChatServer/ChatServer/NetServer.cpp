@@ -664,6 +664,11 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 			return;
 		}
 		
+		_pPacket->m_header.byCode = _Header.byCode;
+		_pPacket->m_header.shLen = _Header.shLen;
+		_pPacket->m_header.RandKey = _Header.RandKey;
+		_pPacket->m_header.CheckSum = _Header.CheckSum;
+
 		_pPacket->PopData(sizeof(CPacket::st_PACKET_HEADER));
 
 		if (false == OnRecv(pSession->iSessionKey, _pPacket))

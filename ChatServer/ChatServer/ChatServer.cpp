@@ -202,6 +202,16 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 
 			if (pPlayer->AccountNo != AccountNo)
 			{
+				m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
+					const_cast<WCHAR*>(L"REQ_SECTOR_MOVE - AccountNo Wrong [Pakcet AccountNo : %d, My AccountNo : %d]"), AccountNo, pPlayer->AccountNo);
+				Disconnect(iClientNo);
+				break;
+			}
+
+			if (50 <= shX || 50 <= shY)
+			{
+				m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
+					const_cast<WCHAR*>(L"REQ_SECTOR_MOVE - Pos Wrong"));
 				Disconnect(iClientNo);
 				break;
 			}
@@ -243,6 +253,13 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 
 			WORD Len;
 			*pPacket >> Len;
+
+			if (10000 < Len)
+			{
+				m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
+					const_cast<WCHAR*>(L"Pakcet Len is wrong"));
+				break;
+			}
 
 			WCHAR * pMsg = new WCHAR[Len / 2];			
 			pPacket->PopData(pMsg, Len / 2);			
@@ -415,21 +432,21 @@ void CChatServer::UpdateThread_Update()
 
 void CChatServer::HeartBeatThread_Update()
 {
-//	while (!m_bClose)
+	while (!m_bClose)
 	{
-		Sleep(1000);
-		ULONG64 currenttick = GetTickCount64();
-		ULONG64 playertick;
-		map<unsigned __int64, PLAYER*>::iterator iter;
-		for (iter = m_Playermap.begin(); iter != m_Playermap.end(); iter++)
-		{
-			if (currenttick < iter->second->LastRecvPacket)
-				continue;
-			playertick = currenttick - iter->second->LastRecvPacket;
-			
-			if(TIMEOUT_TIME < playertick)
-				Disconnect(iter->first);
-		}
+		Sleep(10000);
+		//ULONG64 currenttick = GetTickCount64();
+		//ULONG64 playertick;
+		//map<unsigned __int64, PLAYER*>::iterator iter;
+		//for (iter = m_Playermap.begin(); iter != m_Playermap.end(); iter++)
+		//{
+		//	if (currenttick < iter->second->LastRecvPacket)
+		//		continue;
+		//	playertick = currenttick - iter->second->LastRecvPacket;
+		//	
+		//	if(TIMEOUT_TIME < playertick)
+		//		Disconnect(iter->first);
+		//}
 	}
 	return;
 }
