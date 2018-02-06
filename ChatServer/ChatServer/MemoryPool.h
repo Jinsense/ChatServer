@@ -70,18 +70,28 @@ inline CMemoryPool<Type>::~CMemoryPool()
 template<class Type>
 inline Type * CMemoryPool<Type>::Alloc()
 {
-	InterlockedIncrement(&m_lUseCount);
+	long curalloc = m_lAllocCount;
+	long curuse = InterlockedIncrement(&m_lUseCount);
+
+	if (curuse > curalloc)
+	{
+		InterlockedIncrement(&m_lAllocCount);
+		return &((new st_NODE)->Data);
+	}
 
 	st_TOP _Top;
-	_Top.pNode = m_pTop->pNode;
-	_Top.iCount = m_pTop->iCount;
+//	_Top.pNode = m_pTop->pNode;
+//	_Top.iCount = m_pTop->iCount;
 	for (; ; )
 	{
-		if (nullptr == _Top.pNode)
+		_Top.pNode = m_pTop->pNode;
+		_Top.iCount = m_pTop->iCount;
+//		if (nullptr == _Top.pNode)
+		/*if(curcount > curalloc)
 		{
 			InterlockedIncrement(&m_lAllocCount);
 			return &((new st_NODE)->Data);
-		}
+		}*/
 		if (InterlockedCompareExchange128((LONG64*)m_pTop, _Top.iCount + 1,
 										(LONG64)_Top.pNode->pNext, (LONG64*)&_Top))
 		{
@@ -93,21 +103,23 @@ inline Type * CMemoryPool<Type>::Alloc()
 template<class Type>
 inline void CMemoryPool<Type>::Free(Type *pData)
 {
-	InterlockedDecrement(&m_lUseCount);
+	
 	st_NODE *_pNode = (st_NODE*)((char*)pData - sizeof(st_NODE*));
 
 	st_TOP _Top;
-	_Top.iCount = m_pTop->iCount;
-	_Top.pNode = m_pTop->pNode;
 	for (; ; )
 	{
+		_Top.iCount = m_pTop->iCount;
+		_Top.pNode = m_pTop->pNode;
 		_pNode->pNext = _Top.pNode;
 		if (InterlockedCompareExchange128((LONG64*)m_pTop, _Top.iCount + 1,
 										(LONG64)_pNode, (LONG64*)&_Top))
 		{
+			InterlockedDecrement(&m_lUseCount);
 			return;
 		}
 	}
+
 }
 
 #endif _CHATSERVER_MEMORY_POOL_H_

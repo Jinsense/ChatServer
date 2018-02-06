@@ -262,7 +262,7 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 			}
 
 			WCHAR * pMsg = new WCHAR[Len / 2];			
-			pPacket->PopData(pMsg, Len / 2);			
+			pPacket->PopData((char*)pMsg, Len);			
 
 			CPacket *pNewPacket = CPacket::Alloc();
 			WORD Type = en_PACKET_CS_CHAT_RES_MESSAGE;
@@ -408,7 +408,11 @@ void CChatServer::UpdateThread_Update()
 			{
 				PLAYER *pPlayer = FindPlayer(pMsg->ClientInfo.iSessionKey);
 				if (nullptr == pPlayer)
+				{
+					m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
+						const_cast<WCHAR*>(L"UPDATE_LEAVE - Session Not Find"));
 					break;
+				}
 				if (pPlayer->ClientPos.shX != 10000 && pPlayer->ClientPos.shY != 10000)
 					DeleteSectorPlayer(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, pPlayer->ClientNo);
 				m_Playermap.erase(pMsg->ClientInfo.iSessionKey);

@@ -71,10 +71,12 @@ inline void CLockFreeStack<Type>::Push(Type Data)
 	_pNode->Data = Data;
 
 	st_TOP _Top;
-	_Top.pNode = m_pTop->pNode;
-	_Top.iCount = m_pTop->iCount;
+	/*_Top.pNode = m_pTop->pNode;
+	_Top.iCount = m_pTop->iCount;*/
 	for (;;)
 	{
+		_Top.pNode = m_pTop->pNode;
+		_Top.iCount = m_pTop->iCount;
 		_pNode->pNext = _Top.pNode;
 		if (InterlockedCompareExchange128((LONG64*)m_pTop, _Top.iCount + 1, 
 										(LONG64)_pNode, (LONG64*)&_Top))
@@ -95,10 +97,12 @@ inline void CLockFreeStack<Type>::Pop(Type *pData)
 		return;
 	}
 	st_TOP _Top;
-	_Top.pNode = m_pTop->pNode;
-	_Top.iCount = m_pTop->iCount;
+	/*_Top.pNode = m_pTop->pNode;
+	_Top.iCount = m_pTop->iCount;*/
 	for (;;)
 	{
+		_Top.pNode = m_pTop->pNode;
+		_Top.iCount = m_pTop->iCount;
 		if (InterlockedCompareExchange128((LONG64*)m_pTop, _Top.iCount + 1, 
 									(LONG64)_Top.pNode->pNext, (LONG64*)&_Top))
 		{
