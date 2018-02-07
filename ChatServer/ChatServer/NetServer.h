@@ -38,18 +38,18 @@ struct st_SessionInfo
 struct st_IO_RELEASE_COMPARE
 {
 	__int64	iIOCount;
-	__int64	iReleaseFlag;
+	__int64	iRelease;
 
 	st_IO_RELEASE_COMPARE() :
 		iIOCount(0),
-		iReleaseFlag(false) {}
+		iRelease(false) {}
 };
 
 struct st_Session
 {
 	bool				bLoginFlag;
-	long				lRelease;
-	long				lIOCount;
+//	long				lRelease;
+//	long				lIOCount;
 	long				lSendFlag;
 	long				lSendCount;
 	unsigned __int64	iSessionKey;
@@ -60,11 +60,12 @@ struct st_Session
 	CRingBuffer			PacketQ;
 	CLockFreeQueue<CPacket*> SendQ;
 	st_SessionInfo		Info;
+	st_IO_RELEASE_COMPARE	*Compare;
 
 	st_Session() :
 		RecvQ(MAX_QUEUE_SIZE),
 		PacketQ(MAX_QUEUE_SIZE),
-		lIOCount(0),
+//		lIOCount(0),
 		lSendFlag(false){}
 };
 
@@ -150,7 +151,7 @@ private:
 
 private:
 	CLockFreeStack<UINT64*>	SessionStack; 
-	st_IO_RELEASE_COMPARE	*pIOCompare;
+//	st_IO_RELEASE_COMPARE	*pIOCompare;
 	st_Session				*pSessionArray;
 	SOCKET					m_listensock;
 	CRITICAL_SECTION		m_SessionCS;

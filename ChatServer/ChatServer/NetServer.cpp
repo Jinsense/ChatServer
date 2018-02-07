@@ -12,7 +12,6 @@ using namespace std;
 
 CNetServer::CNetServer()
 {
-	pIOCompare = nullptr;
 	pSessionArray = nullptr;
 	m_listensock = INVALID_SOCKET;
 	
@@ -48,21 +47,18 @@ bool CNetServer::ServerStart(const WCHAR *pOpenIP, int iPort, int iMaxWorkerThre
 
 	CPacket::MemoryPoolInit();
 
-	pIOCompare = (st_IO_RELEASE_COMPARE*)_aligned_malloc(sizeof(st_IO_RELEASE_COMPARE), 16);
-	pIOCompare->iIOCount = 0;
-	pIOCompare->iReleaseFlag = false;
-
 	pSessionArray = new st_Session[iMaxSession];
 	
 	for (int i = 0; i < iMaxSession; i++)
 	{
-		pSessionArray[i].lIOCount = 0;
+		pSessionArray[i].Compare = (st_IO_RELEASE_COMPARE*)_aligned_malloc(sizeof(st_IO_RELEASE_COMPARE), 16);
+		pSessionArray[i].Compare->iIOCount = 0;
+		pSessionArray[i].Compare->iRelease = false;
 		pSessionArray[i].sock = INVALID_SOCKET;
 		pSessionArray[i].lSendCount = 0;
 		pSessionArray[i].iSessionKey = NULL;
 		pSessionArray[i].lSendFlag = false;
 		pSessionArray[i].bLoginFlag = false;
-		pSessionArray[i].lRelease = false;
 	}
 
 	pIndex = new unsigned __int64[iMaxSession];
@@ -122,7 +118,7 @@ bool CNetServer::ServerStop()
 	wprintf(L"[Server :: Server_Stop]	Start\n");
 
 	m_bWhiteIPMode = true;
-	_aligned_free(pIOCompare);
+
 	delete pSessionArray;
 	delete pIndex;
 
@@ -143,16 +139,16 @@ void CNetServer::Disconnect(unsigned __int64 iSessionKey)
 		return;
 	}
 
-	if (true == _pSession->lRelease || iSessionKey != _pSession->iSessionKey)
+	if (true == _pSession->Compare->iRelease || iSessionKey != _pSession->iSessionKey)
 	{
-		if (0 == InterlockedDecrement(&_pSession->lIOCount))
+		if (0 == InterlockedDecrement64(&_pSession->Compare->iIOCount))
 			ClientRelease(_pSession);
 		return;
 	}
 
 	shutdown(_pSession->sock, SD_BOTH);
 
-	if (0 == InterlockedDecrement(&_pSession->lIOCount))
+	if (0 == InterlockedDecrement64(&_pSession->Compare->iIOCount))
 		ClientRelease(_pSession);
 
 	return;
@@ -182,9 +178,9 @@ bool CNetServer::SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket)
 	//	return false;
 	//}
 	
-	if (true == pSessionArray[_iIndex].lRelease)
+	if (true == pSessionArray[_iIndex].Compare->iRelease)
 	{
-		if (0 == InterlockedDecrement(&pSessionArray[_iIndex].lIOCount))
+		if (0 == InterlockedDecrement64(&pSessionArray[_iIndex].Compare->iIOCount))
 		{
 			ClientRelease(&pSessionArray[_iIndex]);
 		}
@@ -201,7 +197,7 @@ bool CNetServer::SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket)
 		pPacket->EnCode();
 		pSessionArray[_iIndex].SendQ.Enqueue(pPacket);
 
-		if (0 == InterlockedDecrement(&pSessionArray[_iIndex].lIOCount))
+		if (0 == InterlockedDecrement64(&pSessionArray[_iIndex].Compare->iIOCount))
 		{
 			ClientRelease(&pSessionArray[_iIndex]);
 			return false;
@@ -211,7 +207,7 @@ bool CNetServer::SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket)
 		return true;
 	}
 
-	if (0 == InterlockedDecrement(&pSessionArray[_iIndex].lIOCount))
+	if (0 == InterlockedDecrement64(&pSessionArray[_iIndex].Compare->iIOCount))
 		ClientRelease(&pSessionArray[_iIndex]);
 	return false;
 }
@@ -259,31 +255,39 @@ bool CNetServer::ClientShutdown(st_Session *pSession)
 
 bool CNetServer::ClientRelease(st_Session *pSession)
 {
-	st_IO_RELEASE_COMPARE _CheckFlag;
-	_CheckFlag.iIOCount = pSession->lIOCount;
-	_CheckFlag.iReleaseFlag = pSession->lRelease;
+	unsigned __int64 iSessionKey = pSession->iSessionKey;
 
-	if (false == InterlockedCompareExchange128((LONG64*)pIOCompare, 0,
-		0, (LONG64*)&_CheckFlag))
+	st_IO_RELEASE_COMPARE	Compare;
+	Compare.iIOCount = 0;
+	Compare.iRelease = false;
+
+	if (false == InterlockedCompareExchange128((LONG64*)pSession->Compare, true,
+		0, (LONG64*)&Compare))
 	{
 //		m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
 //			const_cast<WCHAR*>(L"ClientRelease - shutdown call"));
 //		shutdown(pSession->sock,SD_BOTH);
+
 		return false;
 	}
-
-	if ( true == InterlockedCompareExchange(&pSession->lRelease, true, false))
-	{
-		m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
-			const_cast<WCHAR*>(L"ClientRelease - 중복릴리즈 시도"));
-		shutdown(pSession->sock, SD_BOTH);
-			return false;
-	}
+	//if ( true == InterlockedCompareExchange64(&pSession->Compare.iRelease, true, false))
+	//{
+	//	m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
+	//		const_cast<WCHAR*>(L"ClientRelease - 중복릴리즈 시도 [Index : %d]"), iSessionKey >> 48);
+	//	shutdown(pSession->sock, SD_BOTH);
+	//		return false;
+	//}
 
 //	InterlockedExchange(&pSession->lRelease, true);
 //	pSession->bRelease = true;
 
-	OnClientLeave(pSession->iSessionKey);
+	if (iSessionKey != pSession->iSessionKey || 0 == iSessionKey)
+	{
+		m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
+			const_cast<WCHAR*>(L"ClientRelease - SessionKey Not Same [SessionKey : %d, pSession->SessionKey :%d]"), iSessionKey, pSession->iSessionKey);
+		return false;
+	}
+//	OnClientLeave(pSession->iSessionKey);
 
 	while (0 < pSession->SendQ.GetUseCount())
 	{
@@ -299,12 +303,15 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 		_pPacket->Free();
 	}
 
+	OnClientLeave(iSessionKey);
+//	OnClientLeave(pSession->iSessionKey);
 
-	unsigned __int64 iSessionKey = pSession->iSessionKey;
+//	unsigned __int64 iSessionKey = pSession->iSessionKey;
 	unsigned __int64 iIndex = GET_INDEX(iIndex, iSessionKey);
 
 	InterlockedDecrement(&m_iConnectClient);
 	closesocket(pSession->sock);
+	pSession->iSessionKey = 0;
 	pSession->bLoginFlag = false;
 	PutIndex(iIndex);
 	return true;
@@ -343,7 +350,7 @@ void CNetServer::WorkerThread_Update()
 			CompleteSend(_pSession, _dwTrans);
 		}
 
-		if (0 >= (_dwRetval =InterlockedDecrement(&_pSession->lIOCount)))
+		if (0 >= (_dwRetval =InterlockedDecrement64(&_pSession->Compare->iIOCount)))
 		{
 			if (0 == _dwRetval)
 				ClientRelease(_pSession);
@@ -385,21 +392,25 @@ void CNetServer::AcceptThread_Update()
 //			ClientRelease(&pSessionArray[*_iSessionNum]);
 			continue;
 		}
-		if (0 != pSessionArray[*_iSessionNum].lIOCount)
-		{
-			m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
-				const_cast<WCHAR*>(L"AcceptThread - IOCount is Not 0"));
-//			shutdown(clientSock, SD_BOTH);
-			closesocket(clientSock);
-//			ClientRelease(&pSessionArray[*_iSessionNum]);
-			continue;
-		}
+
 		InterlockedIncrement(&m_iConnectClient);
+		
+		InterlockedIncrement64(&pSessionArray[*_iSessionNum].Compare->iIOCount);
 
 		unsigned __int64 iIndex = *_iSessionNum;
 
 		pSessionArray[*_iSessionNum].iSessionKey = m_iSessionKeyCnt++;
 		SET_INDEX(iIndex, pSessionArray[*_iSessionNum].iSessionKey);
+
+	/*	st_Session *_pSession = SessionAcquireLock(pSessionArray[*_iSessionNum].iSessionKey);
+		if (nullptr == _pSession)
+		{
+			m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
+				const_cast<WCHAR*>(L"AcceptThread - IOCount is Not 0"));
+			shutdown(clientSock, SD_BOTH);
+			continue;
+		}*/
+
 		pSessionArray[*_iSessionNum].sock = clientSock;
 		pSessionArray[*_iSessionNum].RecvQ.Clear();
 		if (0 != pSessionArray[*_iSessionNum].PacketQ.GetUseSize())
@@ -422,14 +433,14 @@ void CNetServer::AcceptThread_Update()
 			}
 		}
 
-		pSessionArray[*_iSessionNum].lRelease = false;
+		pSessionArray[*_iSessionNum].Compare->iRelease = false;
 		pSessionArray[*_iSessionNum].lSendFlag = false;
 		pSessionArray[*_iSessionNum].lSendCount = 0;
 		pSessionArray[*_iSessionNum].bLoginFlag = true;
 		pSessionArray[*_iSessionNum].Info.iSessionKey = 
 			pSessionArray[*_iSessionNum].iSessionKey;
 
-		InterlockedIncrement(&pSessionArray[*_iSessionNum].lIOCount);
+//		InterlockedIncrement(&pSessionArray[*_iSessionNum].lIOCount);
 		CreateIoCompletionPort((HANDLE)clientSock, m_hIOCP, 
 						(ULONG_PTR)&pSessionArray[*_iSessionNum], 0);
 		OnClientJoin(pSessionArray[*_iSessionNum].Info);
@@ -443,10 +454,10 @@ st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iSessionKey)
 	unsigned __int64 _iIndex = iSessionKey >> 48;
 	st_Session *_pSession = &pSessionArray[_iIndex];
 	
-	_lCount = InterlockedIncrement(&_pSession->lIOCount);
+	_lCount = InterlockedIncrement64(&_pSession->Compare->iIOCount);
 	if (1 == _lCount)
 	{
-		InterlockedDecrement(&_pSession->lIOCount);
+		InterlockedDecrement64(&_pSession->Compare->iIOCount);
 		ClientRelease(_pSession);
 //		m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
 //			const_cast<WCHAR*>(L"SessionAcquireLock - IOCount is 0 and shutdown call"));
@@ -456,7 +467,7 @@ st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iSessionKey)
 
 	if (false == _pSession->bLoginFlag)
 	{
-		InterlockedDecrement(&_pSession->lIOCount);
+		InterlockedDecrement64(&_pSession->Compare->iIOCount);
 		ClientRelease(_pSession);
 //		m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
 //			const_cast<WCHAR*>(L"SessionAcquireLock - LoginFlag is false and shutdown call"));
@@ -464,9 +475,9 @@ st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iSessionKey)
 		return nullptr;
 	}
 
-	if (true == _pSession->lRelease)
+	if (true == _pSession->Compare->iRelease)
 	{
-		InterlockedDecrement(&_pSession->lIOCount);
+		InterlockedDecrement64(&_pSession->Compare->iIOCount);
 		ClientRelease(_pSession);
 //		m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
 //			const_cast<WCHAR*>(L"SessionAcquireLock - ReleaseFlag is true and shutdown call"));
@@ -476,7 +487,7 @@ st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iSessionKey)
 
 	if (iSessionKey != _pSession->iSessionKey)
 	{
-		InterlockedDecrement(&_pSession->lIOCount);
+		InterlockedDecrement64(&_pSession->Compare->iIOCount);
 		ClientRelease(_pSession);
 //		m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
 //			const_cast<WCHAR*>(L"SessionAcquireLock - SessionKey is Not smae and shutdown call"));
@@ -490,7 +501,7 @@ st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iSessionKey)
 void CNetServer::SessionAcquireFree(st_Session *pSession)
 {
 	DWORD _dwRetval;
-	if (0 >= (_dwRetval = InterlockedDecrement(&pSession->lIOCount)))
+	if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
 	{
 		if (0 == _dwRetval)
 		{
@@ -514,7 +525,7 @@ void CNetServer::StartRecvPost(st_Session *pSession)
 	DWORD _dwNotBrokenPushSize = pSession->RecvQ.GetNotBrokenPushSize();
 	if (0 == _dwFreeSize && 0 == _dwNotBrokenPushSize)
 	{
-		if (0 >= (_dwRetval = InterlockedDecrement(&pSession->lIOCount)))
+		if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
 		{
 			if (0 == _dwRetval)
 			{
@@ -546,7 +557,7 @@ void CNetServer::StartRecvPost(st_Session *pSession)
 		int _iLastError = WSAGetLastError();
 		if (ERROR_IO_PENDING != _iLastError)
 		{
-			if (0 >= (_dwRetval = InterlockedDecrement(&pSession->lIOCount)))
+			if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
 			{
 				if (0 == _dwRetval)
 					ClientRelease(pSession);
@@ -580,7 +591,7 @@ void CNetServer::RecvPost(st_Session *pSession)
 	DWORD _dwNotBrokenPushSize = pSession->RecvQ.GetNotBrokenPushSize();
 	if (0 == _dwFreeSize && 0 == _dwNotBrokenPushSize)
 	{
-		if (0 >= (_dwRetval = InterlockedDecrement(&pSession->lIOCount)))
+		if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
 		{
 			if (0 == _dwRetval)
 				ClientRelease(pSession);
@@ -610,7 +621,7 @@ void CNetServer::RecvPost(st_Session *pSession)
 		int _iLastError = WSAGetLastError();
 		if (ERROR_IO_PENDING != _iLastError)
 		{
-			if (0 >= (_dwRetval = InterlockedDecrement(&pSession->lIOCount)))
+			if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
 			{
 				if (0 == _dwRetval)
 					ClientRelease(pSession);
@@ -697,7 +708,7 @@ void CNetServer::SendPost(st_Session *pSession)
 			int _LastError = WSAGetLastError();
 			if (ERROR_IO_PENDING != _LastError)
 			{				  
-				if (0 >= (_dwRetval = InterlockedDecrement(&pSession->lIOCount)))
+				if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
 				{
 					if (0 == _dwRetval)
 						ClientRelease(pSession);
@@ -732,6 +743,18 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 			return;
 		}
 
+		if (static_cast<int>(CPacket::en_PACKETDEFINE::PACKET_CODE) != _Header.byCode)
+		{
+			shutdown(pSession->sock, SD_BOTH);
+			return;
+		}
+
+		if (200 < _Header.shLen + sizeof(CPacket::st_PACKET_HEADER))
+		{
+			shutdown(pSession->sock, SD_BOTH);
+			return;
+		}
+
 		CPacket *_pPacket = CPacket::Alloc();
 
 		if (1 != _pPacket->GetRefCount())
@@ -741,24 +764,17 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 
 		pSession->RecvQ.Dequeue((char*)_pPacket->GetBufferPtr(), _Header.shLen + sizeof(CPacket::st_PACKET_HEADER));
 
-		if (static_cast<int>(CPacket::en_PACKETDEFINE::PACKET_CODE) != _Header.byCode)
-		{
-			shutdown(pSession->sock, SD_BOTH);
-			_pPacket->Free();
-			return;
-		}
-
-		if (200 < _Header.shLen + sizeof(CPacket::st_PACKET_HEADER))
-		{
-			shutdown(pSession->sock, SD_BOTH);
-			_pPacket->Free();
-		}
+		//if (static_cast<int>(CPacket::en_PACKETDEFINE::PACKET_CODE) != _Header.byCode)
+		//{
+		//	shutdown(pSession->sock, SD_BOTH);
+		//	_pPacket->Free();
+		//	return;
+		//}
 
 		_pPacket->PushData(_Header.shLen + sizeof(CPacket::st_PACKET_HEADER));
 
 		if (false == _pPacket->DeCode(&_Header))
 		{
-
 			shutdown(pSession->sock, SD_BOTH);
 			_pPacket->Free();
 			return;

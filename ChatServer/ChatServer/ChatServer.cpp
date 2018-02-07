@@ -236,7 +236,7 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 	case en_PACKET_CS_CHAT_REQ_MESSAGE:
 	{
 		PLAYER *pPlayer = FindPlayer(iClientNo);
-		if (nullptr == pPlayer)
+		if (nullptr == pPlayer || pPacket->m_header.shLen != sizeof(WORD) + pPacket->GetDataSize())
 		{
 			Disconnect(iClientNo);
 		}
@@ -254,7 +254,15 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 			WORD Len;
 			*pPacket >> Len;
 
-			if (10000 < Len)
+			WORD Check = pPacket->m_header.shLen - 12;
+
+			if (Len != Check)
+			{
+				Disconnect(iClientNo);
+				break;
+			}
+
+			if (10000 < Len )
 			{
 				m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
 					const_cast<WCHAR*>(L"CHAT_REQ_MESSAGE - Pakcet Len is wrong"));
@@ -410,7 +418,7 @@ void CChatServer::UpdateThread_Update()
 				if (nullptr == pPlayer)
 				{
 					m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
-						const_cast<WCHAR*>(L"UPDATE_LEAVE - Session Not Find"));
+						const_cast<WCHAR*>(L"UPDATE_LEAVE - Session Not Find [SessionKey : %d]"), pMsg->ClientInfo.iSessionKey);
 					break;
 				}
 				if (pPlayer->ClientPos.shX != 10000 && pPlayer->ClientPos.shY != 10000)

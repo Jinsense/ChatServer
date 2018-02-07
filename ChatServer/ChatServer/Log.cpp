@@ -31,7 +31,7 @@ void CSystemLog::Log(WCHAR *szType, en_LOG_LEVEL LogLevel, WCHAR *szStringFormat
 		GetLocalTime(&st);
 
 
-		hResult = StringCchPrintf(szFileName, 256, L"%d%02d %sLog.txt", st.wYear, st.wMonth, szType);
+		hResult = StringCchPrintf(szFileName, 256, L"%d%02d %s.txt", st.wYear, st.wMonth, szType);
 
 		if (FAILED(hResult))
 		{
