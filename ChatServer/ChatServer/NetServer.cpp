@@ -293,14 +293,16 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 	{
 		CPacket *_pPacket;
 		pSession->SendQ.Dequeue(_pPacket);
-		_pPacket->Free();
+		if (nullptr != _pPacket)
+			_pPacket->Free();
 	}
 
 	while (0 < pSession->PacketQ.GetUseSize())
 	{
 		CPacket *_pPacket;
 		pSession->PacketQ.Dequeue((char*)&_pPacket, sizeof(CPacket*));
-		_pPacket->Free();
+		if (nullptr != _pPacket)
+			_pPacket->Free();
 	}
 
 	OnClientLeave(iSessionKey);
@@ -419,7 +421,8 @@ void CNetServer::AcceptThread_Update()
 			{
 				CPacket *_pPacket;
 				pSessionArray[*_iSessionNum].PacketQ.Dequeue((char*)&_pPacket, sizeof(CPacket*));
-				_pPacket->Free();
+				if (nullptr != _pPacket)
+					_pPacket->Free();
 			}
 		}
 
@@ -429,7 +432,8 @@ void CNetServer::AcceptThread_Update()
 			{
 				CPacket *_pPacket;
 				pSessionArray[*_iSessionNum].SendQ.Dequeue(_pPacket);
-				_pPacket->Free();
+				if (nullptr != _pPacket)
+					_pPacket->Free();
 			}
 		}
 
@@ -662,7 +666,8 @@ void CNetServer::SendPost(st_Session *pSession)
 			{
 				bool _bCheck;
 				_bCheck = pSession->SendQ.Dequeue(_pPacket);
-				if (false == _bCheck)
+//				if (false == _bCheck)
+				if(nullptr == _pPacket)
 				{
 					InterlockedExchangeAdd(&pSession->lSendCount, -(MAX_WSABUF_NUMBER - i));
 					InterlockedExchange(&pSession->lSendFlag, false);
@@ -682,7 +687,8 @@ void CNetServer::SendPost(st_Session *pSession)
 			{	
 				bool _bCheck;
 				_bCheck = pSession->SendQ.Dequeue(_pPacket);
-				if (false == _bCheck)
+//				if (false == _bCheck)
+				if(nullptr == _pPacket)
 				{
 					InterlockedExchangeAdd(&pSession->lSendCount, -(_iUseSize - i));
 					InterlockedExchange(&pSession->lSendFlag, false);
@@ -764,13 +770,6 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 
 		pSession->RecvQ.Dequeue((char*)_pPacket->GetBufferPtr(), _Header.shLen + sizeof(CPacket::st_PACKET_HEADER));
 
-		//if (static_cast<int>(CPacket::en_PACKETDEFINE::PACKET_CODE) != _Header.byCode)
-		//{
-		//	shutdown(pSession->sock, SD_BOTH);
-		//	_pPacket->Free();
-		//	return;
-		//}
-
 		_pPacket->PushData(_Header.shLen + sizeof(CPacket::st_PACKET_HEADER));
 
 		if (false == _pPacket->DeCode(&_Header))
@@ -811,24 +810,6 @@ void CNetServer::CompleteSend(st_Session *pSession, DWORD dwTransfered)
 
 	SendPost(pSession);
 }
-
-//bool CNetServer::OnRecv(st_Session *pSession, CPacket *pPacket)
-//{
-//	m_iRecvPacketTPS++;
-//
-//	__int64 _iData = 0;
-//	*pPacket >> _iData;
-//
-//	CPacket *_pPacket = CPacket::Alloc();
-//	*_pPacket << _iData;
-//
-//	bool retval = false;
-//	if (pSession->bRelease == false)
-//		retval = SendPacket(pSession->iSessionKey, _pPacket);
-//	_pPacket->Free();
-//
-//	return retval;
-//}
 
 bool CNetServer::SetShutDownMode(bool bFlag)
 {
