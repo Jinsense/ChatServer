@@ -96,32 +96,30 @@ void CChatServer::MonitorThread_Update()
 		localtime_s(_t, &_timer);
 		if (true == m_bMonitorFlag)
 		{
-			wprintf(L"[%d/%d/%d %d:%d:%d]\n\n", _t->tm_year + 1900, _t->tm_mon + 1,
+			wprintf(L"	[%d/%d/%d %d:%d:%d]\n\n", _t->tm_year + 1900, _t->tm_mon + 1,
 				_t->tm_mday, _t->tm_hour, _t->tm_min, _t->tm_sec);
-			wprintf(L"[ConnectSession			:	%I64d]\n", m_iConnectClient);
-			wprintf(L"[MemoryPool_AllocCount		:	%I64d]\n", CPacket::GetAllocPool());
-			wprintf(L"[MemoryPool_UseCount		:	%I64d]\n\n", CPacket::GetUsePool());
+			wprintf(L"	ConnectSession			:	%I64d	\n", m_iConnectClient);
+			wprintf(L"	MemoryPool_AllocCount		:	%I64d	\n", CPacket::GetAllocPool());
+			wprintf(L"	MemoryPool_UseCount		:	%I64d	\n\n", CPacket::GetUsePool());
 
-			wprintf(L"[UpdateThreadMSG_AllocCount	:	%I64d]\n", m_UpdateMessagePool->GetAllocCount());
-			wprintf(L"[UpdateThreadQ_UseCount		:	%I64d]\n", m_UpdateMessageQ.GetUseCount());
-			wprintf(L"[UpdateThreadQ_PoolUseCount	:	%I64d]\n", m_UpdateMessageQ.GetQueueMemoryPoolUseCount());
-			wprintf(L"[UpdateThreadQ_PoolAllocCount	:	%I64d]\n\n", m_UpdateMessageQ.GetQueueMemoryPoolAllocCount());
+			wprintf(L"	UpdateThreadMSG_AllocCount	:	%I64d	\n", m_UpdateMessagePool->GetAllocCount());
+			wprintf(L"	UpdateThreadQ_UseCount		:	%I64d	\n\n", m_UpdateMessageQ.GetUseCount());
 
-			wprintf(L"[Player_AllocCount		:	%I64d]\n", m_PlayerPool->GetAllocCount());
-			wprintf(L"[Player_UseCount		:	%I64d]\n", m_PlayerPool->GetUseCount());
+			wprintf(L"	Player_AllocCount		:	%I64d	\n", m_PlayerPool->GetAllocCount());
+			wprintf(L"	Player_UseCount			:	%I64d	\n\n", m_PlayerPool->GetUseCount());
 
 			//	로그인세션키 - 미사용	
-			wprintf(L"[LoginSessionKey		:	%I64d]\n", 0);
-			wprintf(L"[Accept_Total			:	%I64d]\n", m_iAcceptTotal);
-			wprintf(L"[Accept_TPS			:	%I64d]\n", m_iAcceptTPS);
-			wprintf(L"[Update_TPS			:	%I64d]\n", m_iUpdateTPS);
-			wprintf(L"[SendPacket_TPS			:	%I64d]\n", m_iSendPacketTPS);
-			wprintf(L"[RecvPacket_TPS			:	%I64d]\n\n", m_iRecvPacketTPS);
+			wprintf(L"	LoginSessionKey			:	%I64d	\n\n", 0);
+			wprintf(L"	Accept_Total			:	%I64d	\n", m_iAcceptTotal);
+			wprintf(L"	Accept_TPS			:	%I64d	\n", m_iAcceptTPS);
+			wprintf(L"	Update_TPS			:	%I64d	\n", m_iUpdateTPS);
+			wprintf(L"	SendPacket_TPS			:	%I64d	\n", m_iSendPacketTPS);
+			wprintf(L"	RecvPacket_TPS			:	%I64d	\n\n", m_iRecvPacketTPS);
 
 			//	세션miss - 미사용
-			wprintf(L"[SessionMiss			:	%I64d]\n", 0);
+			wprintf(L"	SessionMiss			:	%I64d	\n", 0);
 			//	세션notfound - 미사용
-			wprintf(L"[SessionNotFound		:	%I64d]\n\n", 0);
+			wprintf(L"	SessionNotFound			:	%I64d	\n\n", 0);
 		}
 		m_iAcceptTPS = 0;
 		m_iRecvPacketTPS = 0;
