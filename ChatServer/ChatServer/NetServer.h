@@ -47,9 +47,7 @@ struct st_IO_RELEASE_COMPARE
 
 struct st_Session
 {
-	bool				bLoginFlag;
-//	long				lRelease;
-//	long				lIOCount;
+	long				lLoginFlag;
 	long				lSendFlag;
 	long				lSendCount;
 	unsigned __int64	iSessionKey;
@@ -95,7 +93,7 @@ public:
 	bool				SetMonitorMode(bool bFlag);
 
 	st_Session*			SessionAcquireLock(unsigned __int64 SessionKey);
-	void				SessionAcquireFree(st_Session *pSession);
+	bool				SessionAcquireFree(st_Session *pSession);
 
 private:
 	bool				ServerInit();
