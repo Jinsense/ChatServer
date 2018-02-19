@@ -1,6 +1,7 @@
 #ifndef _CHATSERVER_NETWORK_PACKET_H_
 #define _CHATSERVER_NETWORK_PACKET_H_
 
+#include "Dump.h"
 #include "MemoryPool.h"
 #include "MemoryPool_TLS.h"
 

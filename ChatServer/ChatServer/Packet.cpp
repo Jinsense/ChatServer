@@ -46,9 +46,13 @@ CPacket * CPacket::Alloc()
 
 void CPacket::Free()
 {
-	if (0 >= InterlockedDecrement64(&m_iRefCount))
+	__int64 Count = InterlockedDecrement64(&m_iRefCount);
+	if (0 >= Count)
 	{
-		m_pMemoryPool->Free(this);
+		if (0 > Count)
+			g_CrashDump->Crash();
+		else
+			m_pMemoryPool->Free(this);
 	}
 }
 
@@ -67,8 +71,9 @@ void CPacket::PushData(WCHAR* pSrc, int iSize)
 {
 	int Size = iSize * 2;
 	if (m_pEndPos - m_pWritePos < Size)
-		throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR),
-			Size, int(m_pEndPos - m_pWritePos));
+		g_CrashDump->Crash();
+		/*throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR),
+			Size, int(m_pEndPos - m_pWritePos));*/
 	memcpy_s(m_pWritePos, Size, pSrc, Size);
 	m_pWritePos += Size;
 	m_iDataSize += Size;
@@ -78,8 +83,9 @@ void CPacket::PopData(WCHAR* pDest, int iSize)
 {
 	int Size = iSize * 2;
 	if (m_iDataSize < Size)
-		throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::POP_ERR),
-			Size, m_iDataSize);
+		g_CrashDump->Crash();
+		/*throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::POP_ERR),
+			Size, m_iDataSize);*/
 	memcpy_s(pDest, Size, m_pReadPos, Size);
 	m_pReadPos += Size;
 	m_iDataSize -= Size;
@@ -88,8 +94,9 @@ void CPacket::PopData(WCHAR* pDest, int iSize)
 void CPacket::PushData(char *pSrc, int iSize)
 {
 	if (m_pEndPos - m_pWritePos < iSize)
-		throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR), 
-						iSize, int(m_pEndPos - m_pWritePos));
+		g_CrashDump->Crash();
+		/*throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR), 
+						iSize, int(m_pEndPos - m_pWritePos));*/
 	memcpy_s(m_pWritePos, iSize, pSrc, iSize);
 	m_pWritePos += iSize;
 	m_iDataSize += iSize;
@@ -98,8 +105,9 @@ void CPacket::PushData(char *pSrc, int iSize)
 void CPacket::PopData(char *pDest, int iSize)
 {
 	if (m_iDataSize < iSize)
-		throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::POP_ERR), 
-						iSize, m_iDataSize);
+		g_CrashDump->Crash();
+		/*throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::POP_ERR), 
+						iSize, m_iDataSize);*/
 	memcpy_s(pDest, iSize, m_pReadPos, iSize);
 	m_pReadPos += iSize;
 	m_iDataSize -= iSize;
@@ -108,8 +116,9 @@ void CPacket::PopData(char *pDest, int iSize)
 void CPacket::PushData(int iSize)
 {
 	if (m_pEndPos - m_pWritePos < iSize)
-		throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR), 
-						iSize, int(m_pEndPos - m_pWritePos));
+		g_CrashDump->Crash();
+		/*throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR), 
+						iSize, int(m_pEndPos - m_pWritePos));*/
 	m_pWritePos += iSize;
 	m_iDataSize += iSize;
 }
@@ -117,8 +126,9 @@ void CPacket::PushData(int iSize)
 void CPacket::PopData(int iSize)
 {
 	if (m_iDataSize < iSize)
-		throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR), 
-						iSize, m_iDataSize);
+		g_CrashDump->Crash();
+		/*throw st_ERR_INFO(static_cast<int>(en_PACKETDEFINE::PUSH_ERR), 
+						iSize, m_iDataSize);*/
 	m_pReadPos += iSize;
 	m_iDataSize -= iSize;
 }

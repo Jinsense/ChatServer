@@ -58,7 +58,6 @@ bool CNetServer::ServerStart(const WCHAR *pOpenIP, int iPort, int iMaxWorkerThre
 		pSessionArray[i].lSendCount = 0;
 		pSessionArray[i].iSessionKey = NULL;
 		pSessionArray[i].lSendFlag = false;
-		pSessionArray[i].lLoginFlag = false;
 	}
 
 	pIndex = new unsigned __int64[iMaxSession];
@@ -128,11 +127,6 @@ bool CNetServer::ServerStop()
 
 void CNetServer::Disconnect(unsigned __int64 iSessionKey)
 {
-//	unsigned __int64  _iIndex = iSessionKey >> 48;
-//	st_Session *_pSession = &pSessionArray[_iIndex];
-
-//	InterlockedIncrement(&_pSession->lIOCount);
-
 	st_Session *_pSession = SessionAcquireLock(iSessionKey);
 	if (nullptr == _pSession)
 	{
@@ -142,17 +136,11 @@ void CNetServer::Disconnect(unsigned __int64 iSessionKey)
 	if (true == _pSession->Compare->iRelease || iSessionKey != _pSession->iSessionKey)
 	{
 		SessionAcquireFree(_pSession);
-		//if (0 == InterlockedDecrement64(&_pSession->Compare->iIOCount))
-		//	ClientRelease(_pSession);
 		return;
 	}
 
 	if (true != SessionAcquireFree(_pSession))
 		shutdown(_pSession->sock, SD_BOTH);	
-
-	/*if (0 == InterlockedDecrement64(&_pSession->Compare->iIOCount))
-		ClientRelease(_pSession);*/
-
 	return;
 }
 
@@ -174,50 +162,15 @@ bool CNetServer::SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket)
 	if (true == InterlockedCompareExchange64(&pSessionArray[_iIndex].Compare->iRelease, true, true))
 	{
 		SessionAcquireFree(_pSession);
-		/*if (0 == InterlockedDecrement64(&pSessionArray[_iIndex].Compare->iIOCount))
-		{
-			ClientRelease(&pSessionArray[_iIndex]);
-		}*/
 		return false;
 	}
 
-	/*if (true == pSessionArray[_iIndex].Compare->iRelease)
-	{
-		if (0 == InterlockedDecrement64(&pSessionArray[_iIndex].Compare->iIOCount))
-		{
-			ClientRelease(&pSessionArray[_iIndex]);
-		}
-		return false;
-	}*/
-
 	if (pSessionArray[_iIndex].iSessionKey == iSessionKey)
 	{
-		if (false == InterlockedCompareExchange(&pSessionArray[_iIndex].lLoginFlag, false, false))
-		{
-			SessionAcquireFree(_pSession);
-			/*if (0 == InterlockedDecrement64(&pSessionArray[_iIndex].Compare->iIOCount))
-			{
-				ClientRelease(&pSessionArray[_iIndex]);
-			}*/
-			return false;
-		}
-		//if (true != pSessionArray[_iIndex].lLoginFlag)
-		//	return false;
-
 		m_iSendPacketTPS++;
 		pPacket->AddRef();
 		pPacket->EnCode();
 		pSessionArray[_iIndex].SendQ.Enqueue(pPacket);
-
-		/*if (0 == InterlockedDecrement64(&pSessionArray[_iIndex].Compare->iIOCount))
-		{
-			ClientRelease(&pSessionArray[_iIndex]);
-			return false;
-		}*/
-//		SessionAcquireFree(_pSession);
-
-		/*if (true == SessionAcquireFree(_pSession))
-			return false;*/
 
 		SendPost(&pSessionArray[_iIndex]);
 
@@ -228,8 +181,7 @@ bool CNetServer::SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket)
 	}
 
 	SessionAcquireFree(_pSession);
-	/*if (0 == InterlockedDecrement64(&pSessionArray[_iIndex].Compare->iIOCount))
-		ClientRelease(&pSessionArray[_iIndex]);*/
+	
 	return false;
 }
 
@@ -293,14 +245,6 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 		return false;
 	}
 
-//	pSession->lLoginFlag = false;
-	if (false == InterlockedCompareExchange(&pSession->lLoginFlag, false, true))
-	{
-		m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
-			const_cast<WCHAR*>(L"ClientRelease - LoginFlag was true [Index : %d]"), iSessionKey << 48);
-		return false;
-	}
-		
 	if (iSessionKey != pSession->iSessionKey)
 	{
 		m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
@@ -337,13 +281,6 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 	InterlockedDecrement(&m_iConnectClient);
 	closesocket(pSession->sock);
 	pSession->iSessionKey = 0;
-	InterlockedExchange(&pSession->lSendFlag, false);
-	InterlockedExchange(&pSession->lSendCount, 0);
-//	if (0 != pSession->lSendCount)
-//	{
-//		InterlockedExchange(&pSession->lSendCount, 0);
-//	}
-//	pSession->bLoginFlag = false;
 	PutIndex(iIndex);
 	return true;
 }
@@ -382,11 +319,6 @@ void CNetServer::WorkerThread_Update()
 		}
 
 		SessionAcquireFree(_pSession);
-	/*	if (0 >= (_dwRetval =InterlockedDecrement64(&_pSession->Compare->iIOCount)))
-		{
-			if (0 == _dwRetval)
-				ClientRelease(_pSession);
-		}*/
 	}
 }
 
@@ -415,13 +347,6 @@ void CNetServer::AcceptThread_Update()
 			closesocket(clientSock);
 			continue;
 		}
-		if (true == InterlockedCompareExchange(&pSessionArray[*_iSessionNum].lLoginFlag, true, false))
-		{
-			m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
-				const_cast<WCHAR*>(L"AcceptThread - LoginFlag is TRUE"));
-			closesocket(clientSock);
-			continue;
-		}
 		if (false == InterlockedCompareExchange64(&pSessionArray[*_iSessionNum].Compare->iRelease, false, true))
 		{
 			m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
@@ -436,13 +361,6 @@ void CNetServer::AcceptThread_Update()
 			closesocket(clientSock);
 			continue;
 		}
-	/*	if (true == pSessionArray[*_iSessionNum].lLoginFlag)
-		{
-			m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM, 
-				const_cast<WCHAR*>(L"AcceptThread - LoginFlag is TRUE"));
-			closesocket(clientSock);
-			continue;
-		}*/
 
 		InterlockedIncrement(&m_iConnectClient);
 		
@@ -477,10 +395,9 @@ void CNetServer::AcceptThread_Update()
 			}
 		}
 
-//		pSessionArray[*_iSessionNum].Compare->iRelease = false;
-//		pSessionArray[*_iSessionNum].lSendFlag = false;
-//		pSessionArray[*_iSessionNum].lSendCount = 0;
-//		pSessionArray[*_iSessionNum].bLoginFlag = true;
+		if (false != pSessionArray[*_iSessionNum].lSendFlag)
+			InterlockedExchange(&pSessionArray[*_iSessionNum].lSendFlag, false);
+
 		if (0 != pSessionArray[*_iSessionNum].lSendCount)
 			InterlockedExchange(&pSessionArray[*_iSessionNum].lSendCount, 0);
 		pSessionArray[*_iSessionNum].Info.iSessionKey = 
@@ -503,46 +420,18 @@ st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iSessionKey)
 	if (1 == _lCount)
 	{
 		SessionAcquireFree(_pSession);
-//		InterlockedDecrement64(&_pSession->Compare->iIOCount);
-//		ClientRelease(_pSession);
 		return nullptr;
 	}
-
-	if (false == InterlockedCompareExchange(&_pSession->lLoginFlag, false, false))
-	{
-		SessionAcquireFree(_pSession);
-//		InterlockedDecrement64(&_pSession->Compare->iIOCount);
-//		ClientRelease(_pSession);
-		return nullptr;
-	}
-
-	//if (false == _pSession->lLoginFlag)
-	//{
-	//	InterlockedDecrement64(&_pSession->Compare->iIOCount);
-	//	ClientRelease(_pSession);
-	//	return nullptr;
-	//}
 
 	if (true == InterlockedCompareExchange64(&_pSession->Compare->iRelease, true, true))
 	{
 		SessionAcquireFree(_pSession);
-//		InterlockedDecrement64(&_pSession->Compare->iIOCount);
-//		ClientRelease(_pSession);
 		return nullptr;
 	}
-
-	//if (true == _pSession->Compare->iRelease)
-	//{
-	//	InterlockedDecrement64(&_pSession->Compare->iIOCount);
-	//	ClientRelease(_pSession);
-	//	return nullptr;
-	//}
 
 	if (iSessionKey != _pSession->iSessionKey)
 	{
 		SessionAcquireFree(_pSession);
-//		InterlockedDecrement64(&_pSession->Compare->iIOCount);
-//		ClientRelease(_pSession);
 		return nullptr;
 	}
 
@@ -575,16 +464,6 @@ void CNetServer::StartRecvPost(st_Session *pSession)
 		{
 			shutdown(pSession->sock, SD_BOTH);
 		}
-	/*	if (0 == (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
-		{
-			ClientRelease(pSession);
-		}
-		else
-		{
-			m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
-				const_cast<WCHAR*>(L"StartRecvPost - shutdown call"));
-			shutdown(pSession->sock, SD_BOTH);
-		}*/
 		return;
 	}
 	int _iNumOfBuf = (_dwNotBrokenPushSize < _dwFreeSize) ? 2 : 1;
@@ -607,17 +486,6 @@ void CNetServer::StartRecvPost(st_Session *pSession)
 			{
 				shutdown(pSession->sock, SD_BOTH);
 			}
-			/*if (0 == (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
-			{
-				if (0 == _dwRetval)
-					ClientRelease(pSession);
-			}
-			else
-			{
-				m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
-					const_cast<WCHAR*>(L"StartRecvPost - shutdown call"));
-				shutdown(pSession->sock, SD_BOTH);
-			}*/				
 		}
 	}
 	return;
@@ -625,7 +493,6 @@ void CNetServer::StartRecvPost(st_Session *pSession)
 
 void CNetServer::RecvPost(st_Session *pSession)
 {
-//	InterlockedIncrement(&pSession->lIOCount);
 	st_Session *_pSession = SessionAcquireLock(pSession->iSessionKey);
 	if (nullptr == _pSession)
 	{
@@ -645,15 +512,6 @@ void CNetServer::RecvPost(st_Session *pSession)
 		{
 			shutdown(pSession->sock, SD_BOTH);
 		}
-		/*if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
-		{
-			if (0 == _dwRetval)
-				ClientRelease(pSession);
-		}
-		else
-		{
-			shutdown(pSession->sock, SD_BOTH);
-		}*/			
 		return;
 	}
 
@@ -678,15 +536,6 @@ void CNetServer::RecvPost(st_Session *pSession)
 			{
 				shutdown(pSession->sock, SD_BOTH);
 			}
-			/*if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
-			{
-				if (0 == _dwRetval)
-					ClientRelease(pSession);
-			}
-			else
-			{
-				shutdown(pSession->sock, SD_BOTH);
-			}*/
 		}
 	}
 	return;
@@ -694,23 +543,18 @@ void CNetServer::RecvPost(st_Session *pSession)
 
 void CNetServer::SendPost(st_Session *pSession)
 {
-	if (true == InterlockedCompareExchange(&pSession->lSendFlag, true, false))
-		return;
+	//if (true == InterlockedCompareExchange(&pSession->lSendFlag, true, false))
+	//	return;
 	do 
 	{
-		/*if (true == InterlockedCompareExchange(&pSession->lSendFlag, true, false))		
-			return;		*/
+		if (true == InterlockedCompareExchange(&pSession->lSendFlag, true, false))		
+			return;		
 
 		if (0 == pSession->SendQ.GetUseCount())
 		{
 			InterlockedExchange(&pSession->lSendFlag, false);
 			return;
 		}
-		//st_Session *_pSession = SessionAcquireLock(pSession->iSessionKey);
-		//if (nullptr == _pSession)
-		//{
-		//	return;
-		//}
 		
 		WSABUF _Buf[MAX_WSABUF_NUMBER];
 		CPacket *_pPacket;
@@ -772,15 +616,6 @@ void CNetServer::SendPost(st_Session *pSession)
 					shutdown(pSession->sock, SD_BOTH);
 					break;
 				}
-				/*if (0 >= (_dwRetval = InterlockedDecrement64(&pSession->Compare->iIOCount)))
-				{
-					if (0 == _dwRetval)
-						ClientRelease(pSession);
-				}
-				else
-				{
-					shutdown(pSession->sock, SD_BOTH);
-				}*/
 			}
 		}
 	} while (0 != pSession->SendQ.GetUseCount());
@@ -800,6 +635,12 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 			return;
 		}
 		pSession->RecvQ.Peek((char*)&_Header, sizeof(CPacket::st_PACKET_HEADER));
+
+		if (MAX_QUEUE_SIZE < _Header.shLen)
+		{
+			shutdown(pSession->sock, SD_BOTH);
+			return;
+		}
 		
 		if (sizeof(CPacket::st_PACKET_HEADER) + _Header.shLen > pSession->RecvQ.GetUseSize())
 		{

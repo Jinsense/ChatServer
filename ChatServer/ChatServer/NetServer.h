@@ -47,7 +47,6 @@ struct st_IO_RELEASE_COMPARE
 
 struct st_Session
 {
-	long				lLoginFlag;
 	long				lSendFlag;
 	long				lSendCount;
 	unsigned __int64	iSessionKey;
