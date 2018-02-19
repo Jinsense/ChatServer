@@ -323,12 +323,12 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 			_pPacket->Free();
 	}
 
-	if (0 == iSessionKey)
+	/*if (0 == iSessionKey)
 	{
 		m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
 			const_cast<WCHAR*>(L"ClientRelease - SessionKey is 0 "));
 		return false;
-	}
+	}*/
 
 	OnClientLeave(iSessionKey);
 
