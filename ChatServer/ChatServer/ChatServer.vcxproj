@@ -134,7 +134,7 @@
     <ClInclude Include="LockFreeStack.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="MemoryPool.h" />
-    <ClInclude Include="MemoryPool_TLS.h" />
+    <ClInclude Include="MemoryPoolTLS.h" />
     <ClInclude Include="NetServer.h" />
     <ClInclude Include="ChatServer.h" />
     <ClInclude Include="Packet.h" />

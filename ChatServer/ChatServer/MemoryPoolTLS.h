@@ -1,5 +1,5 @@
-#ifndef _CHATSERVER_MEMORY_POOL_H_
-#define _CHATSERVER_MEMORY_POOL_H_
+#ifndef _CHATSERVER_MEMORY_TLS_H_
+#define _CHATSERVER_MEMORY_TLS_H_
 
 #include <Windows.h>
 
@@ -14,7 +14,7 @@ private:
 
 		st_NODE() :
 			pNext(nullptr)
-			{}
+		{}
 	};
 	struct st_TOP
 	{
@@ -80,20 +80,14 @@ inline Type * CMemoryPool<Type>::Alloc()
 	}
 
 	st_TOP _Top;
-//	_Top.pNode = m_pTop->pNode;
-//	_Top.iCount = m_pTop->iCount;
+
 	for (; ; )
 	{
 		_Top.pNode = m_pTop->pNode;
 		_Top.iCount = m_pTop->iCount;
-//		if (nullptr == _Top.pNode)
-		/*if(curcount > curalloc)
-		{
-			InterlockedIncrement(&m_lAllocCount);
-			return &((new st_NODE)->Data);
-		}*/
+
 		if (InterlockedCompareExchange128((LONG64*)m_pTop, _Top.iCount + 1,
-										(LONG64)_Top.pNode->pNext, (LONG64*)&_Top))
+			(LONG64)_Top.pNode->pNext, (LONG64*)&_Top))
 		{
 			return &(_Top.pNode->Data);
 		}
@@ -103,6 +97,7 @@ inline Type * CMemoryPool<Type>::Alloc()
 template<class Type>
 inline void CMemoryPool<Type>::Free(Type *pData)
 {
+
 	st_NODE *_pNode = (st_NODE*)((char*)pData - sizeof(st_NODE*));
 
 	st_TOP _Top;
@@ -112,15 +107,13 @@ inline void CMemoryPool<Type>::Free(Type *pData)
 		_Top.pNode = m_pTop->pNode;
 		_pNode->pNext = _Top.pNode;
 		if (InterlockedCompareExchange128((LONG64*)m_pTop, _Top.iCount + 1,
-										(LONG64)_pNode, (LONG64*)&_Top))
+			(LONG64)_pNode, (LONG64*)&_Top))
 		{
 			InterlockedDecrement(&m_lUseCount);
 			return;
 		}
 	}
-
 }
-
 
 template<class Type>
 class CMemoryPoolTLS
@@ -147,7 +140,7 @@ private:
 		};
 
 	public:
-		CChunk()
+		CChunk() 
 		{
 			_pNodeArr = new st_NODE[eNUM_CHUNKBLOCK];
 			for (auto iCnt = 0; iCnt < eNUM_CHUNKBLOCK; iCnt++)
@@ -162,7 +155,7 @@ private:
 			_AllocCount = eNUM_CHUNKBLOCK;
 			_pTop = &_pNodeArr[0];
 		}
-
+		
 		~CChunk()
 		{
 			delete[] _pNodeArr;
@@ -185,12 +178,12 @@ private:
 
 		long Free()
 		{
-			return InterlockedDecrement(&_FreeCount);
+			return InterlockedDecrement(&_FreeCount);			
 		}
 
 	private:
-		//		const st_NODE * const	_pEnd;
-		st_NODE * _pNodeArr;
+//		const st_NODE * const	_pEnd;
+		st_NODE		*_pNodeArr;
 		st_NODE		*_pTop;
 		long		_AllocCount;
 		long		_FreeCount;
@@ -238,7 +231,7 @@ public:
 	void Free(Type *pData)
 	{
 		InterlockedDecrement(&_UseCount);
-		CChunk::st_NODE *pNode = (CChunk::st_NODE*)((char*)pData - (sizeof(CChunk*) * 2));
+		CChunk::st_NODE * pNode = (CChunk::st_NODE *)((char*)pData - (sizeof(CChunk*)*2));
 		CChunk *pChunk = pNode->pChunkNode;
 
 		if (0 == pChunk->Free())
@@ -258,4 +251,4 @@ private:
 	CMemoryPool<CChunk>		*_pMemPool;
 };
 
-#endif _CHATSERVER_MEMORY_POOL_H_
+#endif _CHATSERVER_MEMORY_TLS_H_

@@ -3,7 +3,6 @@
 
 #include "Dump.h"
 #include "MemoryPool.h"
-#include "MemoryPool_TLS.h"
 
 class CPacket
 {
