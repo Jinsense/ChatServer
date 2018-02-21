@@ -2,7 +2,9 @@
 
 #include <Windows.h>
 
-CMemoryPool<CPacket>* CPacket::m_pMemoryPool = NULL;
+//CMemoryPool<CPacket>* CPacket::m_pMemoryPool = NULL;
+CMemoryPoolTLS<CPacket>* CPacket::m_pMemoryPool = NULL;
+
 
 CPacket::CPacket() : 
 	m_iBufferSize(static_cast<int>(en_PACKETDEFINE::BUFFER_SIZE)), 
@@ -59,7 +61,7 @@ void CPacket::Free()
 void CPacket::MemoryPoolInit()
 {
 	if (m_pMemoryPool == nullptr)
-		m_pMemoryPool = new CMemoryPool<CPacket>();
+		m_pMemoryPool = new CMemoryPoolTLS<CPacket>();
 }
 
 void CPacket::AddRef()

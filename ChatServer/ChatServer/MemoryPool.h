@@ -14,7 +14,7 @@ private:
 
 		st_NODE() :
 			pNext(nullptr)
-			{}
+		{}
 	};
 	struct st_TOP
 	{
@@ -80,20 +80,14 @@ inline Type * CMemoryPool<Type>::Alloc()
 	}
 
 	st_TOP _Top;
-//	_Top.pNode = m_pTop->pNode;
-//	_Top.iCount = m_pTop->iCount;
+
 	for (; ; )
 	{
 		_Top.pNode = m_pTop->pNode;
 		_Top.iCount = m_pTop->iCount;
-//		if (nullptr == _Top.pNode)
-		/*if(curcount > curalloc)
-		{
-			InterlockedIncrement(&m_lAllocCount);
-			return &((new st_NODE)->Data);
-		}*/
+
 		if (InterlockedCompareExchange128((LONG64*)m_pTop, _Top.iCount + 1,
-										(LONG64)_Top.pNode->pNext, (LONG64*)&_Top))
+			(LONG64)_Top.pNode->pNext, (LONG64*)&_Top))
 		{
 			return &(_Top.pNode->Data);
 		}
@@ -103,6 +97,7 @@ inline Type * CMemoryPool<Type>::Alloc()
 template<class Type>
 inline void CMemoryPool<Type>::Free(Type *pData)
 {
+
 	st_NODE *_pNode = (st_NODE*)((char*)pData - sizeof(st_NODE*));
 
 	st_TOP _Top;
@@ -112,15 +107,13 @@ inline void CMemoryPool<Type>::Free(Type *pData)
 		_Top.pNode = m_pTop->pNode;
 		_pNode->pNext = _Top.pNode;
 		if (InterlockedCompareExchange128((LONG64*)m_pTop, _Top.iCount + 1,
-										(LONG64)_pNode, (LONG64*)&_Top))
+			(LONG64)_pNode, (LONG64*)&_Top))
 		{
 			InterlockedDecrement(&m_lUseCount);
 			return;
 		}
 	}
-
 }
-
 
 template<class Type>
 class CMemoryPoolTLS
@@ -134,11 +127,13 @@ private:
 
 	class CChunk
 	{
+	public:
+
 		struct st_NODE
 		{
+			Type				Data;
 			CChunk				*pChunkNode;
 			st_NODE				*pNext;
-			Type				Data;
 
 			st_NODE() :
 				pChunkNode(nullptr),
@@ -190,7 +185,7 @@ private:
 
 	private:
 		//		const st_NODE * const	_pEnd;
-		st_NODE * _pNodeArr;
+		st_NODE		*_pNodeArr;
 		st_NODE		*_pTop;
 		long		_AllocCount;
 		long		_FreeCount;
@@ -202,7 +197,7 @@ public:
 	{
 		_pMemPool = new CMemoryPool<CChunk>;
 		_TLSIndex = TlsAlloc();
-		_UseCount = 0;
+//		_UseCount = 0;
 		_AllocCount = 0;
 	}
 	~CMemoryPoolTLS()
@@ -212,7 +207,7 @@ public:
 
 	Type *Alloc()
 	{
-		InterlockedIncrement(&_UseCount);
+//		InterlockedIncrement(&_UseCount);
 
 		CChunk *pChunk;
 
@@ -227,7 +222,7 @@ public:
 
 		Type *pPacket = pChunk->Alloc();
 
-		if (NULL == pChunk->_AllocCount)
+		if (0 == pChunk->_AllocCount)
 		{
 			TlsSetValue(_TLSIndex, NULL);
 		}
@@ -237,9 +232,9 @@ public:
 
 	void Free(Type *pData)
 	{
-		InterlockedDecrement(&_UseCount);
-		CChunk::st_NODE *pNode = (CChunk::st_NODE*)((char*)pData - (sizeof(CChunk*) * 2));
-		CChunk *pChunk = pNode->pChunkNode;
+//		InterlockedDecrement(&_UseCount);
+
+		CChunk* pChunk = ((CChunk::st_NODE*)pData)->pChunkNode;
 
 		if (0 == pChunk->Free())
 		{
@@ -248,14 +243,17 @@ public:
 		return;
 	}
 
-	long	GetUseCount() { return _UseCount; }
-	long	GetAllocCount() { return _AllocCount * eNUM_CHUNKBLOCK; }
+//	long	GetUseCount() { return _UseCount; }
+	long	GetAllocCount() { return _pMemPool->GetAllocCount() * eNUM_CHUNKBLOCK; }
 private:
 	DWORD	_TLSIndex;
-	long	_UseCount;
+//	long	_UseCount;
 	long	_AllocCount;
 
 	CMemoryPool<CChunk>		*_pMemPool;
 };
 
 #endif _CHATSERVER_MEMORY_POOL_H_
+
+//		CChunk::st_NODE *pNode = (CChunk::st_NODE*)((char*)pData - (sizeof(CChunk::st_NODE*) * 2));
+//		CChunk *pChunk = pNode->pChunkNode;

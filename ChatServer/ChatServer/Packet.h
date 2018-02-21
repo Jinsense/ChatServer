@@ -54,7 +54,7 @@ public:
 
 	static CPacket*	Alloc();
 	static void		MemoryPoolInit();
-	static __int64	GetUsePool() { return m_pMemoryPool->GetUseCount(); }
+//	static __int64	GetUsePool() { return m_pMemoryPool->GetUseCount(); }
 	static __int64	GetAllocPool() { return m_pMemoryPool->GetAllocCount(); }
 
 	void	AddRef();
@@ -118,7 +118,8 @@ public:
 	CPacket& operator >> (double& Value);
 
 public:
-	static		CMemoryPool<CPacket> *m_pMemoryPool;
+//	static		CMemoryPool<CPacket> *m_pMemoryPool;
+	static		CMemoryPoolTLS<CPacket> *m_pMemoryPool;
 	st_PACKET_HEADER	m_header;
 private:
 	char		m_chBuffer[static_cast<int>(en_PACKETDEFINE::BUFFER_SIZE)];

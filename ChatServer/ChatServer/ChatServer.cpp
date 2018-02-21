@@ -89,6 +89,16 @@ void CChatServer::MonitorThread_Update()
 	struct tm * _t = new struct tm;
 	time_t _timer;
 
+	_timer = time(NULL);
+	localtime_s(_t, &_timer);
+
+	int year = _t->tm_year + 1900;
+	int month = _t->tm_mon + 1;
+	int day = _t->tm_mday;
+	int hour = _t->tm_hour;
+	int min = _t->tm_min;
+	int sec = _t->tm_sec;
+
 	while (1)
 	{
 		Sleep(1000);
@@ -96,11 +106,12 @@ void CChatServer::MonitorThread_Update()
 		localtime_s(_t, &_timer);
 		if (true == m_bMonitorFlag)
 		{
+			wprintf(L"	[ServerStart : %d/%d/%d %d:%d:%d]\n", year, month, day, hour, min, sec);
 			wprintf(L"	[%d/%d/%d %d:%d:%d]\n\n", _t->tm_year + 1900, _t->tm_mon + 1,
 				_t->tm_mday, _t->tm_hour, _t->tm_min, _t->tm_sec);
 			wprintf(L"	ConnectSession			:	%I64d	\n", m_iConnectClient);
 			wprintf(L"	MemoryPool_AllocCount		:	%I64d	\n", CPacket::GetAllocPool());
-			wprintf(L"	MemoryPool_UseCount		:	%I64d	\n\n", CPacket::GetUsePool());
+//			wprintf(L"	MemoryPool_UseCount		:	%I64d	\n\n", CPacket::GetUsePool());
 
 			wprintf(L"	UpdateThreadMSG_AllocCount	:	%I64d	\n", m_UpdateMessagePool->GetAllocCount());
 			wprintf(L"	UpdateThreadQ_UseCount		:	%I64d	\n\n", m_UpdateMessageQ.GetUseCount());

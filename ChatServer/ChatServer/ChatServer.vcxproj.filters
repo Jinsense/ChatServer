@@ -75,8 +75,5 @@
     <ClInclude Include="CommonProtocol.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="MemoryPoolTLS.h">
-      <Filter>MemoryPool</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
