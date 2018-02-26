@@ -124,6 +124,7 @@
     <ClCompile Include="NetServer.cpp" />
     <ClCompile Include="ChatServer.cpp" />
     <ClCompile Include="Packet.cpp" />
+    <ClCompile Include="Parse.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -137,6 +138,7 @@
     <ClInclude Include="NetServer.h" />
     <ClInclude Include="ChatServer.h" />
     <ClInclude Include="Packet.h" />
+    <ClInclude Include="Parse.h" />
     <ClInclude Include="RingBuffer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -40,6 +40,7 @@
     <ClCompile Include="ChatServer.cpp">
       <Filter>IOCP</Filter>
     </ClCompile>
+    <ClCompile Include="Parse.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="APIHook.h">
@@ -75,5 +76,6 @@
     <ClInclude Include="CommonProtocol.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="Parse.h" />
   </ItemGroup>
 </Project>
