@@ -61,7 +61,6 @@ struct st_Session
 	st_Session() :
 		RecvQ(MAX_QUEUE_SIZE),
 		PacketQ(MAX_QUEUE_SIZE),
-//		lIOCount(0),
 		lSendFlag(false){}
 };
 
@@ -147,7 +146,6 @@ private:
 
 private:
 	CLockFreeStack<UINT64*>	SessionStack; 
-//	st_IO_RELEASE_COMPARE	*pIOCompare;
 	st_Session				*pSessionArray;
 	SOCKET					m_listensock;
 	CRITICAL_SECTION		m_SessionCS;
