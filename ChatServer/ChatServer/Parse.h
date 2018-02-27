@@ -1,6 +1,8 @@
 #ifndef _CHATSERVER_PARSE_PARSE_H_
 #define _CHATSERVER_PARSE_PARSE_H_
 
+#include <Windows.h>
+
 class CINIParse
 {
 public:
@@ -13,7 +15,7 @@ public:
 	~CINIParse();
 
 	void	Initial();
-	bool	LoadFile(const char *szFileName);
+	bool	LoadFile(WCHAR *szFileName);
 	bool	ProvideArea(const char *szAreaName);
 	bool	GetValue(const char *szName, char *szValue, int *ipBuffSize);
 	bool	GetValue(const char *szName, int *ipValue);

@@ -1,10 +1,11 @@
 #ifndef _CHATSERVER_NETWORK_PACKET_H_
 #define _CHATSERVER_NETWORK_PACKET_H_
 
+#include "Config.h"
 #include "Dump.h"
 #include "MemoryPool.h"
 
-extern _Config;
+extern CConfig _Config;
 
 class CPacket
 {

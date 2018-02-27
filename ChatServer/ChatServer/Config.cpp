@@ -33,7 +33,7 @@ CConfig::~CConfig()
 bool CConfig::Set()
 {
 	bool res = true;
-	res = _Parse.LoadFile("ChatServer_Config.ini");
+	res = _Parse.LoadFile(L"ChatServer_Config.ini");
 	if (false == res)
 		return false;
 	_Parse.ProvideArea("PACKET");

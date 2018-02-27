@@ -75,7 +75,7 @@ bool CNetServer::ServerStart(const char *pOpenIP, int iPort, int iMaxWorkerThrea
 	struct sockaddr_in _server_addr;
 	ZeroMemory(&_server_addr, sizeof(_server_addr));
 	_server_addr.sin_family = AF_INET;
-	InetPton(AF_INET, pOpenIP, &_server_addr.sin_addr);
+	InetPton(AF_INET, (PCWSTR)pOpenIP, &_server_addr.sin_addr);
 	_server_addr.sin_port = htons(iPort);
 	setsockopt(m_listensock, IPPROTO_TCP, TCP_NODELAY, (const char*)&bNodelay, sizeof(bNodelay));
 
@@ -648,7 +648,8 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 			return;
 		}
 
-		if (static_cast<int>(CPacket::en_PACKETDEFINE::PACKET_CODE) != _Header.byCode)
+//		if (static_cast<int>(CPacket::en_PACKETDEFINE::PACKET_CODE) != _Header.byCode)
+		if (_Config.PACKET_CODE != _Header.byCode)
 		{
 			shutdown(pSession->sock, SD_BOTH);
 			return;

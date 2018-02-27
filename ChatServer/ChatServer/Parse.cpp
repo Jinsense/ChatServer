@@ -25,7 +25,7 @@ void CINIParse::Initial()
 	m_bProvideAreaMode = false;
 }
 
-bool CINIParse::LoadFile(const char *szFileName)
+bool CINIParse::LoadFile(WCHAR *szFileName)
 {
 	HANDLE hFile;
 	DWORD dwRead;
@@ -33,7 +33,7 @@ bool CINIParse::LoadFile(const char *szFileName)
 	if (0 != m_iLoadSize)
 		Initial();
 
-	hFile = CreateFile((LPCWSTR)szFileName, GENERIC_READ, NULL, NULL, OPEN_EXISTING,
+	hFile = CreateFile(szFileName, GENERIC_READ, NULL, NULL, OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (INVALID_HANDLE_VALUE == hFile)
