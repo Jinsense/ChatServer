@@ -106,7 +106,7 @@ void CChatServer::MonitorThread_Update()
 		localtime_s(_t, &_timer);
 		if (true == m_bMonitorFlag)
 		{
-			wprintf(L"	[ServerStart : %d/%d/%d %d:%d:%d]\n", year, month, day, hour, min, sec);
+			wprintf(L"	[ServerStart : %d/%d/%d %d:%d:%d]\n\n", year, month, day, hour, min, sec);
 			wprintf(L"	[%d/%d/%d %d:%d:%d]\n\n", _t->tm_year + 1900, _t->tm_mon + 1,
 				_t->tm_mday, _t->tm_hour, _t->tm_min, _t->tm_sec);
 			wprintf(L"	ConnectSession			:	%I64d	\n", m_iConnectClient);
