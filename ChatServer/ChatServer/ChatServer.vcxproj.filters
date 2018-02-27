@@ -16,6 +16,9 @@
     <Filter Include="Network">
       <UniqueIdentifier>{dfff2454-0b76-4965-bacb-2774b80be3eb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Parse">
+      <UniqueIdentifier>{0cdbaae7-f0fe-4e2c-881b-6f2c53c316af}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -40,7 +43,12 @@
     <ClCompile Include="ChatServer.cpp">
       <Filter>IOCP</Filter>
     </ClCompile>
-    <ClCompile Include="Parse.cpp" />
+    <ClCompile Include="Parse.cpp">
+      <Filter>Parse</Filter>
+    </ClCompile>
+    <ClCompile Include="Config.cpp">
+      <Filter>Parse</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="APIHook.h">
@@ -76,6 +84,11 @@
     <ClInclude Include="CommonProtocol.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="Parse.h" />
+    <ClInclude Include="Parse.h">
+      <Filter>Parse</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>Parse</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

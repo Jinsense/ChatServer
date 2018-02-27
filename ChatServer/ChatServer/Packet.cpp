@@ -178,17 +178,17 @@ void CPacket::EnCode()
 		pPtr++;
 	}
 	Header.CheckSum = (BYTE)(iCheckSum % 256);
-	Header.CheckSum = Header.CheckSum ^ Header.RandKey ^ 
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^ 
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
+	Header.CheckSum = Header.CheckSum ^ Header.RandKey ^ _Config.PACKET_KEY1 ^ _Config.PACKET_KEY2;
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^ 
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
 	for (int iCnt = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
 		iCnt < m_iDataSize + sizeof(st_PACKET_HEADER); iCnt++)
-		m_chBuffer[iCnt] = m_chBuffer[iCnt] ^ Header.RandKey ^
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
-	Header.RandKey = Header.RandKey ^ 
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^ 
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
+		m_chBuffer[iCnt] = m_chBuffer[iCnt] ^ Header.RandKey ^ _Config.PACKET_KEY1 ^ _Config.PACKET_KEY2;
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
+	Header.RandKey = Header.RandKey ^ _Config.PACKET_KEY1 ^ _Config.PACKET_KEY2;
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^ 
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
 
 	memcpy_s(&m_chBuffer, static_cast<int>(en_PACKETDEFINE::HEADER_SIZE), 
 		&Header, static_cast<int>(en_PACKETDEFINE::HEADER_SIZE));
@@ -202,21 +202,22 @@ bool CPacket::DeCode(st_PACKET_HEADER * pInHeader)
 		memcpy_s(&pInHeader, static_cast<int>(en_PACKETDEFINE::HEADER_SIZE), 
 			m_chBuffer, static_cast<int>(en_PACKETDEFINE::HEADER_SIZE));
 
-	if (pInHeader->byCode != static_cast<int>(en_PACKETDEFINE::PACKET_CODE))
+	if (pInHeader->byCode != _Config.PACKET_CODE)
+//		static_cast<int>(en_PACKETDEFINE::PACKET_CODE))
 		return false;
 
-	pInHeader->RandKey = pInHeader->RandKey ^ 
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
-	pInHeader->CheckSum = pInHeader->CheckSum ^ pInHeader->RandKey ^
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
-		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
+	pInHeader->RandKey = pInHeader->RandKey ^ _Config.PACKET_KEY1 ^ _Config.PACKET_KEY2;
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
+	pInHeader->CheckSum = pInHeader->CheckSum ^ pInHeader->RandKey ^_Config.PACKET_KEY1 ^ _Config.PACKET_KEY2;
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
+//		static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
 	for (int iCnt = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE);
 		iCnt < pInHeader->shLen + sizeof(st_PACKET_HEADER); iCnt++)
 	{
-		m_chBuffer[iCnt] = m_chBuffer[iCnt] ^ pInHeader->RandKey ^ 
-			static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
-			static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
+		m_chBuffer[iCnt] = m_chBuffer[iCnt] ^ pInHeader->RandKey ^ _Config.PACKET_KEY1 ^ _Config.PACKET_KEY2;
+//			static_cast<int>(en_PACKETDEFINE::PACKET_KEY1) ^
+//			static_cast<int>(en_PACKETDEFINE::PACKET_KEY2);
 	}
 	int iCheckSum = 0;
 	BYTE *pPtr = (BYTE*)&m_chBuffer[5];

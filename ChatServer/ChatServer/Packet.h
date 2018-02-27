@@ -4,6 +4,8 @@
 #include "Dump.h"
 #include "MemoryPool.h"
 
+extern _Config;
+
 class CPacket
 {
 public:
@@ -16,9 +18,9 @@ public:
 		PAYLOAD_SIZE = 1024,
 		BUFFER_SIZE = HEADER_SIZE + PAYLOAD_SIZE,
 
-		PACKET_CODE = 119,
-		PACKET_KEY1 = 50,
-		PACKET_KEY2 = 132,
+//		PACKET_CODE = 119,
+//		PACKET_KEY1 = 50,
+//		PACKET_KEY2 = 132,
 	};
 
 #pragma pack(push, 1)   
@@ -28,8 +30,8 @@ public:
 		WORD	shLen;
 		BYTE	RandKey;
 		BYTE	CheckSum;
-		st_PACKET_HEADER() :
-			byCode(static_cast<int>(en_PACKETDEFINE::PACKET_CODE)), 
+		st_PACKET_HEADER() : byCode(_Config.PACKET_CODE),
+//			byCode(static_cast<int>(en_PACKETDEFINE::PACKET_CODE)), 
 			RandKey(rand() % 255), CheckSum(NULL), shLen(NULL){}
 	};
 #pragma pack(pop)

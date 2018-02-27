@@ -25,7 +25,7 @@ void CINIParse::Initial()
 	m_bProvideAreaMode = false;
 }
 
-bool CINIParse::LoadFile(char *szFileName)
+bool CINIParse::LoadFile(const char *szFileName)
 {
 	HANDLE hFile;
 	DWORD dwRead;
@@ -33,7 +33,7 @@ bool CINIParse::LoadFile(char *szFileName)
 	if (0 != m_iLoadSize)
 		Initial();
 
-	hFile = CreateFile(szFileName, GENERIC_READ, NULL, NULL, OPEN_EXISTING,
+	hFile = CreateFile((LPCWSTR)szFileName, GENERIC_READ, NULL, NULL, OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (INVALID_HANDLE_VALUE == hFile)
@@ -41,7 +41,7 @@ bool CINIParse::LoadFile(char *szFileName)
 
 	m_iLoadSize = GetFileSize(hFile, NULL);
 
-	if (eBUFFER_SIZE << m_iLoadSize)
+	if (eBUFFER_SIZE < m_iLoadSize)
 	{
 		CloseHandle(hFile);
 		Initial();
@@ -62,7 +62,7 @@ bool CINIParse::LoadFile(char *szFileName)
 	return true;
 }
 
-bool CINIParse::ProvideArea(char *szAreaName)
+bool CINIParse::ProvideArea(const char *szAreaName)
 {
 	char *chpBuff, chBuff[256];
 	int iLength;
@@ -117,7 +117,7 @@ bool CINIParse::ProvideArea(char *szAreaName)
 	return false;
 }
 
-bool CINIParse::GetValue(char *szName, char *szValue, int * ipBuffSize)
+bool CINIParse::GetValue(const char *szName, char *szValue, int *ipBuffSize)
 {
 	char *chpBuff, chBuff[256];
 	int iLength;
@@ -166,7 +166,7 @@ bool CINIParse::GetValue(char *szName, char *szValue, int * ipBuffSize)
 	return false;
 }
 
-bool CINIParse::GetValue(char *szName, int *ipValue)
+bool CINIParse::GetValue(const char *szName, int *ipValue)
 {
 	char *chpBuff, chBuff[256];
 	int iLength;
@@ -204,7 +204,7 @@ bool CINIParse::GetValue(char *szName, int *ipValue)
 	return false;
 }
 
-bool CINIParse::GetValue(char *szName, float *fpValue)
+bool CINIParse::GetValue(const char *szName, float *fpValue)
 {
 	char *chpBuff, chBuff[256];
 	int iLength;

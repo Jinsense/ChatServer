@@ -118,6 +118,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="APIHook.cpp" />
+    <ClCompile Include="Config.cpp" />
     <ClCompile Include="Dump.cpp" />
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="main.cpp" />
@@ -130,6 +131,7 @@
   <ItemGroup>
     <ClInclude Include="APIHook.h" />
     <ClInclude Include="CommonProtocol.h" />
+    <ClInclude Include="Config.h" />
     <ClInclude Include="Dump.h" />
     <ClInclude Include="LockFreeQueue.h" />
     <ClInclude Include="LockFreeStack.h" />

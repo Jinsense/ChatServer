@@ -1,21 +1,30 @@
+#include "Config.h"
 #include "ChatServer.h"
 
 #include <conio.h>
 
+CConfig _Config;
+
 int main()
 {
+	bool res = _Config.Set();
+	if (false == res)
+	{
+		wprintf(L"[Server :: Main]	Config Error\n");
+		return 0;
+	}
+
 	int _Retval;
 	int _In;
 
 	CChatServer _Server;
 	SYSTEM_INFO _SysInfo;
-	const WCHAR *pIP = L"0.0.0.0";
 
 	GetSystemInfo(&_SysInfo);
 	
-	if ((_Retval = _Server.ServerStart(pIP, SERVERPORT,
-				MAX_WORKER_THREAD, true, 
-				MAX_CLIENT_NUMBER)) == false)
+	if ((_Retval = _Server.ServerStart(_Config.BIND_IP, _Config.BIND_PORT,
+				_Config.WORKER_THREAD, true, 
+				_Config.CLIENT_MAX)) == false)
 	{
 		wprintf(L"[Server :: Server_Start] Error\n");
 		return 0;

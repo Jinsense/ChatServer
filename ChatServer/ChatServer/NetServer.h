@@ -12,12 +12,6 @@
 #include "Log.h"
 #include "Dump.h"
 
-
-#define		SERVERPORT				12001
-#define		MAX_CLIENT_NUMBER		40000
-#define		MAX_WORKER_THREAD		10
-#define		TIMEOUT_TIME			30000
-
 #define		MAX_WSABUF_NUMBER		300
 #define		MAX_QUEUE_SIZE			4000
 
@@ -78,7 +72,7 @@ public:
 	virtual bool		OnRecv(unsigned __int64 iSessionKey, CPacket *pPacket) = 0;
 	unsigned __int64	GetClientCount();
 
-	bool				ServerStart(const WCHAR *pOpenIP, int iPort, int iMaxWorkerThread, 
+	bool				ServerStart(const char *pOpenIP, int iPort, int iMaxWorkerThread, 
 								bool bNodelay, int iMaxSession);
 	bool				ServerStop();
 	bool				SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket);

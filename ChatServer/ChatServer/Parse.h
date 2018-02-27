@@ -13,11 +13,11 @@ public:
 	~CINIParse();
 
 	void	Initial();
-	bool	LoadFile(char *szFileName);
-	bool	ProvideArea(char *szAreaName);
-	bool	GetValue(char *szName, char *szValue, int *ipBuffSize);
-	bool	GetValue(char *szName, int *ipValue);
-	bool	GetValue(char *szName, float *fpValue);
+	bool	LoadFile(const char *szFileName);
+	bool	ProvideArea(const char *szAreaName);
+	bool	GetValue(const char *szName, char *szValue, int *ipBuffSize);
+	bool	GetValue(const char *szName, int *ipValue);
+	bool	GetValue(const char *szName, float *fpValue);
 
 protected:
 	bool	SkipNoneCommand();
