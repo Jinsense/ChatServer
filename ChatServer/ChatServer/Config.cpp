@@ -45,6 +45,15 @@ bool CConfig::Set()
 	_Parse.GetValue("BIND_IP", &BIND_IP[0], &BIND_IP_SIZE);
 	_Parse.GetValue("BIND_PORT", &BIND_PORT);
 
+	res = _Parse.ProvideArea("CHAT_SERVER");
+	if (false == res)
+		return false;
+	res = _Parse.GetValue("WORKER_THREAD", &WORKER_THREAD);
+	if (false == res)
+		return false;
+	_Parse.GetValue("CLIENT_MAX", &CLIENT_MAX);
+	_Parse.GetValue("TIMEOUT_TIME", &TIMEOUT_TIME);
+
 	_Parse.ProvideArea("LOGIN_SERVER");
 	_Parse.GetValue("LOGIN_SERVER_IP", &LOGIN_SERVER_IP[0], &LOGIN_IP_SIZE);
 	_Parse.GetValue("LOGIN_SERVER_PORT", &LOGIN_SERVER_PORT);
@@ -52,11 +61,6 @@ bool CConfig::Set()
 	_Parse.ProvideArea("MONITORING_SERVER");
 	_Parse.GetValue("MONITORING_SERVER_IP", &MONITORING_SERVER_IP[0], &MONITORING_IP_SIZE);
 	_Parse.GetValue("MONITORING_SERVER_PORT", &MONITORING_SERVER_PORT);
-
-	_Parse.ProvideArea("CHAT_SERVER");
-	_Parse.GetValue("WORKER_THREAD ", &WORKER_THREAD);
-	_Parse.GetValue("CLIENT_MAX ", &CLIENT_MAX);
-	_Parse.GetValue("TIMEOUT_TIME ", &TIMEOUT_TIME);
 
 	return true;
 }
