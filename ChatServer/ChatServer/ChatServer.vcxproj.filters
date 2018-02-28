@@ -4,9 +4,6 @@
     <Filter Include="Dump">
       <UniqueIdentifier>{8125c337-1861-4c94-8fb8-8a11d639ad59}</UniqueIdentifier>
     </Filter>
-    <Filter Include="IOCP">
-      <UniqueIdentifier>{7fe4a510-d1fe-461f-87a7-3787d395fa62}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Log">
       <UniqueIdentifier>{ea5f0daa-1434-4182-9844-699628565ce1}</UniqueIdentifier>
     </Filter>
@@ -19,6 +16,12 @@
     <Filter Include="Parse">
       <UniqueIdentifier>{0cdbaae7-f0fe-4e2c-881b-6f2c53c316af}</UniqueIdentifier>
     </Filter>
+    <Filter Include="LanClient">
+      <UniqueIdentifier>{a112c8bf-c376-42ee-9cf0-ad95380dbf1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetServer">
+      <UniqueIdentifier>{7fe4a510-d1fe-461f-87a7-3787d395fa62}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -29,7 +32,7 @@
       <Filter>Dump</Filter>
     </ClCompile>
     <ClCompile Include="NetServer.cpp">
-      <Filter>IOCP</Filter>
+      <Filter>NetServer</Filter>
     </ClCompile>
     <ClCompile Include="Log.cpp">
       <Filter>Log</Filter>
@@ -41,13 +44,19 @@
       <Filter>Network</Filter>
     </ClCompile>
     <ClCompile Include="ChatServer.cpp">
-      <Filter>IOCP</Filter>
+      <Filter>NetServer</Filter>
     </ClCompile>
     <ClCompile Include="Parse.cpp">
       <Filter>Parse</Filter>
     </ClCompile>
     <ClCompile Include="Config.cpp">
       <Filter>Parse</Filter>
+    </ClCompile>
+    <ClCompile Include="LanClient.cpp">
+      <Filter>LanClient</Filter>
+    </ClCompile>
+    <ClCompile Include="LanClientManager.cpp">
+      <Filter>LanClient</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -58,7 +67,7 @@
       <Filter>Dump</Filter>
     </ClInclude>
     <ClInclude Include="NetServer.h">
-      <Filter>IOCP</Filter>
+      <Filter>NetServer</Filter>
     </ClInclude>
     <ClInclude Include="Log.h">
       <Filter>Log</Filter>
@@ -79,7 +88,7 @@
       <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="ChatServer.h">
-      <Filter>IOCP</Filter>
+      <Filter>NetServer</Filter>
     </ClInclude>
     <ClInclude Include="CommonProtocol.h">
       <Filter>Network</Filter>
@@ -89,6 +98,12 @@
     </ClInclude>
     <ClInclude Include="Config.h">
       <Filter>Parse</Filter>
+    </ClInclude>
+    <ClInclude Include="LanClient.h">
+      <Filter>LanClient</Filter>
+    </ClInclude>
+    <ClInclude Include="LanClientManager.h">
+      <Filter>LanClient</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

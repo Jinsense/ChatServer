@@ -5,7 +5,6 @@
 #include <list>
 
 #include "NetServer.h"
-#include "CommonProtocol.h"
 
 using namespace std;
 
@@ -72,6 +71,8 @@ typedef struct st_PLAYER
 	ULONG64		LastRecvPacket;
 }PLAYER;
 
+class CLanClientManager;
+
 class CChatServer : public CNetServer
 {
 public:
@@ -130,6 +131,8 @@ private:
 	CLockFreeQueue<UPMSG*> m_UpdateMessageQ;
 	CMemoryPool<UPMSG> *m_UpdateMessagePool;
 	CMemoryPool<PLAYER> *m_PlayerPool;
+
+	CLanClientManager *m_LoginLanClient;
 
 	HANDLE	m_hThread[2];
 	HANDLE	m_hHeartBeatThread;

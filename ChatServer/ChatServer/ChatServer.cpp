@@ -1,7 +1,11 @@
 #include <time.h>
 #include <process.h>
 
+//#include "LanClientManager.h"
 #include "ChatServer.h"
+#include "CommonProtocol.h"
+#include "LanClientManager.h"
+
 
 CChatServer::CChatServer()
 {
@@ -13,6 +17,8 @@ CChatServer::CChatServer()
 	m_hUpdateThread = (HANDLE)_beginthreadex(NULL, 0, &UpdateThread, (LPVOID)this, 0, NULL);
 	m_Event = CreateEvent(NULL, false, false, NULL);
 
+	m_LoginLanClient = new CLanClientManager;
+	m_LoginLanClient->Constructor(this);
 	m_PlayerPool = new CMemoryPool<PLAYER>();
 	m_UpdateMessagePool = new CMemoryPool<UPMSG>();
 }
@@ -113,14 +119,14 @@ void CChatServer::MonitorThread_Update()
 			wprintf(L"	MemoryPool_AllocCount		:	%I64d	\n", CPacket::GetAllocPool());
 //			wprintf(L"	MemoryPool_UseCount		:	%I64d	\n\n", CPacket::GetUsePool());
 
-			wprintf(L"	UpdateThreadMSG_AllocCount	:	%I64d	\n", m_UpdateMessagePool->GetAllocCount());
-			wprintf(L"	UpdateThreadQ_UseCount		:	%I64d	\n\n", m_UpdateMessageQ.GetUseCount());
+			wprintf(L"	UpdateThreadMSG_AllocCount	:	%d	\n", m_UpdateMessagePool->GetAllocCount());
+			wprintf(L"	UpdateThreadQ_UseCount		:	%d	\n\n", m_UpdateMessageQ.GetUseCount());
 
-			wprintf(L"	Player_AllocCount		:	%I64d	\n", m_PlayerPool->GetAllocCount());
-			wprintf(L"	Player_UseCount			:	%I64d	\n\n", m_PlayerPool->GetUseCount());
+			wprintf(L"	Player_AllocCount		:	%d	\n", m_PlayerPool->GetAllocCount());
+			wprintf(L"	Player_UseCount			:	%d	\n\n", m_PlayerPool->GetUseCount());
 
 			//	로그인세션키 - 미사용	
-			wprintf(L"	LoginSessionKey			:	%I64d	\n\n", 0);
+			wprintf(L"	LoginSessionKey			:	%d	\n\n", 0);
 			wprintf(L"	Accept_Total			:	%I64d	\n", m_iAcceptTotal);
 			wprintf(L"	Accept_TPS			:	%I64d	\n", m_iAcceptTPS);
 			wprintf(L"	Update_TPS			:	%I64d	\n", m_iUpdateTPS);
@@ -128,9 +134,9 @@ void CChatServer::MonitorThread_Update()
 			wprintf(L"	RecvPacket_TPS			:	%I64d	\n\n", m_iRecvPacketTPS);
 
 			//	세션miss - 미사용
-			wprintf(L"	SessionMiss			:	%I64d	\n", 0);
+			wprintf(L"	SessionMiss			:	%d	\n", 0);
 			//	세션notfound - 미사용
-			wprintf(L"	SessionNotFound			:	%I64d	\n\n", 0);
+			wprintf(L"	SessionNotFound			:	%d	\n\n", 0);
 		}
 		m_iAcceptTPS = 0;
 		m_iRecvPacketTPS = 0;

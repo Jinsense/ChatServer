@@ -120,6 +120,8 @@
     <ClCompile Include="APIHook.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="Dump.cpp" />
+    <ClCompile Include="LanClient.cpp" />
+    <ClCompile Include="LanClientManager.cpp" />
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NetServer.cpp" />
@@ -133,6 +135,8 @@
     <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="Dump.h" />
+    <ClInclude Include="LanClient.h" />
+    <ClInclude Include="LanClientManager.h" />
     <ClInclude Include="LockFreeQueue.h" />
     <ClInclude Include="LockFreeStack.h" />
     <ClInclude Include="Log.h" />
