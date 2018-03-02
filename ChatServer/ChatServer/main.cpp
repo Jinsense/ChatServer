@@ -1,7 +1,9 @@
+#include <conio.h>
+
 #include "Config.h"
 #include "ChatServer.h"
 
-#include <conio.h>
+
 
 CConfig _Config;
 
@@ -20,9 +22,7 @@ int main()
 	SYSTEM_INFO _SysInfo;
 
 	GetSystemInfo(&_SysInfo);
-
-
-	
+		
 	if ((false == _Server.ServerStart(_Config.BIND_IP, _Config.BIND_PORT,
 				_Config.WORKER_THREAD, true, 
 				_Config.CLIENT_MAX)) == false)
