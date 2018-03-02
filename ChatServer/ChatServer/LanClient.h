@@ -22,7 +22,7 @@ public:
 	CLanClient();
 	~CLanClient();
 
-	bool Connect(WCHAR * ServerIP, int Port, bool NoDelay, int MaxWorkerThread);	//   바인딩 IP, 서버IP / 워커스레드 수 / 나글옵션
+	bool Connect(char * ServerIP, int Port, bool NoDelay, int MaxWorkerThread);	//   바인딩 IP, 서버IP / 워커스레드 수 / 나글옵션
 	bool Disconnect();
 	bool IsConnect();
 	bool SendPacket(CPacket *pPacket);

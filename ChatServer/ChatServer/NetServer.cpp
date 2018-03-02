@@ -58,6 +58,7 @@ bool CNetServer::ServerStart(const char *pOpenIP, int iPort, int iMaxWorkerThrea
 		pSessionArray[i].lSendCount = 0;
 		pSessionArray[i].iSessionKey = NULL;
 		pSessionArray[i].lSendFlag = false;
+		pSessionArray[i].lDisConnect = false;
 	}
 
 	pIndex = new unsigned __int64[iMaxSession];
@@ -395,6 +396,8 @@ void CNetServer::AcceptThread_Update()
 			}
 		}
 
+		InterlockedExchange(&pSessionArray[*_iSessionNum].lDisConnect, false);
+
 		if (false != pSessionArray[*_iSessionNum].lSendFlag)
 			InterlockedExchange(&pSessionArray[*_iSessionNum].lSendFlag, false);
 
@@ -704,6 +707,12 @@ void CNetServer::CompleteSend(st_Session *pSession, DWORD dwTransfered)
 		_pPacket[i]->Free();
 		pSession->PacketQ.Dequeue(sizeof(CPacket*));
 		InterlockedDecrement(&pSession->lSendCount);
+	}
+
+	if (true == pSession->lDisConnect && 0 == pSession->SendQ.GetUseCount)
+	{
+		ClientShutdown(pSession);
+		return;
 	}
 
 	InterlockedExchange(&pSession->lSendFlag, false);

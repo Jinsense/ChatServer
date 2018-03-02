@@ -22,7 +22,7 @@ CLanClient::~CLanClient()
 
 }
 
-bool CLanClient::Connect(WCHAR * ServerIP, int Port, bool bNoDelay, int MaxWorkerThread)
+bool CLanClient::Connect(char * ServerIP, int Port, bool bNoDelay, int MaxWorkerThread)
 {
 	wprintf(L"[Client :: ClientInit]	Start\n");
 

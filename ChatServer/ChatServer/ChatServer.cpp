@@ -462,18 +462,19 @@ void CChatServer::HeartBeatThread_Update()
 	while (!m_bClose)
 	{
 		Sleep(10000);
-		//ULONG64 currenttick = GetTickCount64();
-		//ULONG64 playertick;
-		//map<unsigned __int64, PLAYER*>::iterator iter;
-		//for (iter = m_Playermap.begin(); iter != m_Playermap.end(); iter++)
-		//{
-		//	if (currenttick < iter->second->LastRecvPacket)
-		//		continue;
-		//	playertick = currenttick - iter->second->LastRecvPacket;
-		//	
-		//	if(TIMEOUT_TIME < playertick)
-		//		Disconnect(iter->first);
-		//}
+	//	2~5초 사이로 업데이트 메세지를 생성해서 큐에 넣는다.
+	//	동기화(락을 없게 하기 위해)
+	
 	}
 	return;
+}
+
+bool CChatServer::LoginServerConnect(char * ServerIP, int Port, bool NoDelay, int MaxWorkerThread)
+{
+	return m_LoginLanClient->Connect(ServerIP, Port, NoDelay, MaxWorkerThread);
+}
+
+bool CChatServer::LoginServerDisConnect()
+{
+	return m_LoginLanClient->Disconnect();
 }

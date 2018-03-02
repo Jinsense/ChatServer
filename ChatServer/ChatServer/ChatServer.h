@@ -99,6 +99,9 @@ public:
 	void	UpdateThread_Update();
 	void	HeartBeatThread_Update();
 
+	bool	LoginServerConnect(char * ServerIP, int Port, bool NoDelay, int MaxWorkerThread);
+	bool	LoginServerDisConnect();
+
 private:
 	static unsigned int WINAPI UpdateThread(LPVOID arg)
 	{

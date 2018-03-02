@@ -14,21 +14,25 @@ int main()
 		return 0;
 	}
 
-	int _Retval;
 	int _In;
 
 	CChatServer _Server;
 	SYSTEM_INFO _SysInfo;
 
 	GetSystemInfo(&_SysInfo);
+
+
 	
-	if ((_Retval = _Server.ServerStart(_Config.BIND_IP, _Config.BIND_PORT,
+	if ((false == _Server.ServerStart(_Config.BIND_IP, _Config.BIND_PORT,
 				_Config.WORKER_THREAD, true, 
 				_Config.CLIENT_MAX)) == false)
 	{
 		wprintf(L"[Server :: Server_Start] Error\n");
 		return 0;
 	}
+
+	if(false == _Server.LoginServerConnect(_Config.LOGIN_SERVER_IP, _Config.LOGIN_SERVER_PORT,
+		true, 2))
 
 	while (!_Server.GetShutDownMode())
 	{
