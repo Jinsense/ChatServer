@@ -18,44 +18,48 @@ int main()
 
 	int _In;
 
-	CChatServer _Server;
+	CChatServer _ChatServer;
 	SYSTEM_INFO _SysInfo;
 
 	GetSystemInfo(&_SysInfo);
 		
-	if ((false == _Server.ServerStart(_Config.BIND_IP, _Config.BIND_PORT,
+	if (false == _ChatServer.ServerStart(_Config.BIND_IP, _Config.BIND_PORT,
 				_Config.WORKER_THREAD, true, 
-				_Config.CLIENT_MAX)) == false)
+				_Config.CLIENT_MAX))
 	{
-		wprintf(L"[Server :: Server_Start] Error\n");
+		wprintf(L"[Main :: Server_Start] Error\n");
 		return 0;
 	}
 
-	if(false == _Server.LoginServerConnect(_Config.LOGIN_SERVER_IP, _Config.LOGIN_SERVER_PORT,
+	if (false == _ChatServer.LoginServerConnect(_Config.LOGIN_SERVER_IP, _Config.LOGIN_SERVER_PORT,
 		true, 2))
+	{
+		wprintf(L"[Main :: LanClientConnect] Connect Error\n");
+		return 0;
+	}
 
-	while (!_Server.GetShutDownMode())
+	while (!_ChatServer.GetShutDownMode())
 	{
 		_In = _getch();
 		switch (_In)
 		{
 		case 'q': case 'Q':
 		{
-			_Server.SetShutDownMode(true);
+			_ChatServer.SetShutDownMode(true);
 			wprintf(L"[Main] 서버를 종료합니다.\n");
 			_getch();
 			break;
 		}
 		case 'm': case 'M':
 		{
-			if (false == _Server.GetMonitorMode())
+			if (false == _ChatServer.GetMonitorMode())
 			{
-				_Server.SetMonitorMode(true);
+				_ChatServer.SetMonitorMode(true);
 				wprintf(L"[Main] MonitorMode Start\n");
 			}
 			else
 			{
-				_Server.SetMonitorMode(false);
+				_ChatServer.SetMonitorMode(false);
 				wprintf(L"[Main] MonitorMode Stop\n");
 			}
 		}
