@@ -105,7 +105,7 @@ void CChatServer::MonitorThread_Update()
 	int min = _t->tm_min;
 	int sec = _t->tm_sec;
 
-	while (1)
+	while (m_bMonitorFlag)
 	{
 		Sleep(1000);
 		_timer = time(NULL);
