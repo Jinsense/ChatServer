@@ -153,9 +153,6 @@ private:
 	HANDLE					m_hMonitorThread;
 	HANDLE					m_hAllthread[200];
 	
-	bool					m_bWhiteIPMode;
-	bool					m_bShutdown;
-	
 	unsigned __int64		m_iAllThreadCnt;
 	unsigned __int64		*pIndex;
 	unsigned __int64		m_iSessionKeyCnt;
@@ -165,6 +162,8 @@ public:
 	unsigned __int64		m_iRecvPacketTPS;
 	unsigned __int64		m_iSendPacketTPS;
 	unsigned __int64		m_iConnectClient;
+	bool					m_bWhiteIPMode;
+	bool					m_bShutdown;
 	bool					m_bMonitorFlag;
 
 	CSystemLog				*m_Log;
