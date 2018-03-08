@@ -3,6 +3,7 @@
 
 //#include "ChatServer.h"
 #include "LanClient.h"
+#include "CommonProtocol.h"
 
 
 class CChatServer;

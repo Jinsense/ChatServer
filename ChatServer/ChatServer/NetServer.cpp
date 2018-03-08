@@ -56,7 +56,7 @@ bool CNetServer::ServerStart(const char *pOpenIP, int iPort, int iMaxWorkerThrea
 		pSessionArray[i].Compare->iRelease = true;
 		pSessionArray[i].sock = INVALID_SOCKET;
 		pSessionArray[i].lSendCount = 0;
-		pSessionArray[i].iSessionKey = NULL;
+		pSessionArray[i].iClientNo = NULL;
 		pSessionArray[i].lSendFlag = false;
 		pSessionArray[i].lDisConnect = false;
 	}
@@ -126,15 +126,15 @@ bool CNetServer::ServerStop()
 	return true;
 }
 
-void CNetServer::Disconnect(unsigned __int64 iSessionKey)
+void CNetServer::Disconnect(unsigned __int64 iClientNo)
 {
-	st_Session *_pSession = SessionAcquireLock(iSessionKey);
+	st_Session *_pSession = SessionAcquireLock(iClientNo);
 	if (nullptr == _pSession)
 	{
 		return;
 	}
 
-	if (true == _pSession->Compare->iRelease || iSessionKey != _pSession->iSessionKey)
+	if (true == _pSession->Compare->iRelease || iClientNo != _pSession->iClientNo)
 	{
 		SessionAcquireFree(_pSession);
 		return;
@@ -150,11 +150,11 @@ unsigned __int64 CNetServer::GetClientCount()
 	return m_iConnectClient;
 }
 
-bool CNetServer::SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket)
+bool CNetServer::SendPacket(unsigned __int64 iClientNo, CPacket *pPacket)
 {
-	unsigned __int64 _iIndex = GET_INDEX(_iIndex, iSessionKey);
+	unsigned __int64 _iIndex = GET_INDEX(_iIndex, iClientNo);
 
-	st_Session *_pSession = SessionAcquireLock(iSessionKey);
+	st_Session *_pSession = SessionAcquireLock(iClientNo);
 	if (nullptr == _pSession)
 	{
 		return false;
@@ -166,7 +166,7 @@ bool CNetServer::SendPacket(unsigned __int64 iSessionKey, CPacket *pPacket)
 		return false;
 	}
 
-	if (pSessionArray[_iIndex].iSessionKey == iSessionKey)
+	if (pSessionArray[_iIndex].iClientNo == iClientNo)
 	{
 		m_iSendPacketTPS++;
 		pPacket->AddRef();
@@ -229,9 +229,9 @@ bool CNetServer::ClientShutdown(st_Session *pSession)
 
 bool CNetServer::ClientRelease(st_Session *pSession)
 {
-	unsigned __int64 iSessionKey = pSession->iSessionKey;
+	unsigned __int64 iClientNo = pSession->iClientNo;
 
-	if (0 == iSessionKey)
+	if (0 == iClientNo)
 	{
 		return false;
 	}
@@ -246,10 +246,10 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 		return false;
 	}
 
-	if (iSessionKey != pSession->iSessionKey)
+	if (iClientNo != pSession->iClientNo)
 	{
 		m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
-			const_cast<WCHAR*>(L"ClientRelease - SessionKey Not Same [SessionKey : %d, pSession->SessionKey :%d]"), iSessionKey, pSession->iSessionKey);
+			const_cast<WCHAR*>(L"ClientRelease - SessionKey Not Same [SessionKey : %d, pSession->SessionKey :%d]"), iClientNo, pSession->iClientNo);
 		return false;
 	}
 
@@ -275,13 +275,13 @@ bool CNetServer::ClientRelease(st_Session *pSession)
 		return false;
 	}*/
 
-	OnClientLeave(iSessionKey);
+	OnClientLeave(iClientNo);
 
-	unsigned __int64 iIndex = GET_INDEX(iIndex, iSessionKey);
+	unsigned __int64 iIndex = GET_INDEX(iIndex, iClientNo);
 
 	InterlockedDecrement(&m_iConnectClient);
 	closesocket(pSession->sock);
-	pSession->iSessionKey = 0;
+	pSession->iClientNo = 0;
 	PutIndex(iIndex);
 	return true;
 }
@@ -355,7 +355,7 @@ void CNetServer::AcceptThread_Update()
 			closesocket(clientSock);
 			continue;
 		}
-		if (0 != pSessionArray[*_iSessionNum].iSessionKey)
+		if (0 != pSessionArray[*_iSessionNum].iClientNo)
 		{
 			m_Log->Log(const_cast<WCHAR*>(L"Error"), LOG_SYSTEM,
 				const_cast<WCHAR*>(L"AcceptThread - SessionKey is Not 0"));
@@ -369,8 +369,8 @@ void CNetServer::AcceptThread_Update()
 
 		unsigned __int64 iIndex = *_iSessionNum;
 
-		pSessionArray[*_iSessionNum].iSessionKey = m_iSessionKeyCnt++;
-		SET_INDEX(iIndex, pSessionArray[*_iSessionNum].iSessionKey);
+		pSessionArray[*_iSessionNum].iClientNo = m_iSessionKeyCnt++;
+		SET_INDEX(iIndex, pSessionArray[*_iSessionNum].iClientNo);
 
 		pSessionArray[*_iSessionNum].sock = clientSock;
 		pSessionArray[*_iSessionNum].RecvQ.Clear();
@@ -403,8 +403,8 @@ void CNetServer::AcceptThread_Update()
 
 		if (0 != pSessionArray[*_iSessionNum].lSendCount)
 			InterlockedExchange(&pSessionArray[*_iSessionNum].lSendCount, 0);
-		pSessionArray[*_iSessionNum].Info.iSessionKey = 
-			pSessionArray[*_iSessionNum].iSessionKey;
+		pSessionArray[*_iSessionNum].Info.iClientNo =
+			pSessionArray[*_iSessionNum].iClientNo;
 
 		CreateIoCompletionPort((HANDLE)clientSock, m_hIOCP, 
 						(ULONG_PTR)&pSessionArray[*_iSessionNum], 0);
@@ -413,10 +413,10 @@ void CNetServer::AcceptThread_Update()
 	}
 }
 
-st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iSessionKey)
+st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iClientNo)
 {
 	long _lCount = 0;
-	unsigned __int64 _iIndex = iSessionKey >> 48;
+	unsigned __int64 _iIndex = iClientNo >> 48;
 	st_Session *_pSession = &pSessionArray[_iIndex];
 	
 	_lCount = InterlockedIncrement64(&_pSession->Compare->iIOCount);
@@ -432,7 +432,7 @@ st_Session* CNetServer::SessionAcquireLock(unsigned __int64 iSessionKey)
 		return nullptr;
 	}
 
-	if (iSessionKey != _pSession->iSessionKey)
+	if (iClientNo != _pSession->iClientNo)
 	{
 		SessionAcquireFree(_pSession);
 		return nullptr;
@@ -496,7 +496,7 @@ void CNetServer::StartRecvPost(st_Session *pSession)
 
 void CNetServer::RecvPost(st_Session *pSession)
 {
-	st_Session *_pSession = SessionAcquireLock(pSession->iSessionKey);
+	st_Session *_pSession = SessionAcquireLock(pSession->iClientNo);
 	if (nullptr == _pSession)
 	{
 		return;
@@ -602,7 +602,7 @@ void CNetServer::SendPost(st_Session *pSession)
 				_Buf[i].len = _pPacket->GetPacketSize();
 			}
 		}
-		st_Session *_pSession = SessionAcquireLock(pSession->iSessionKey);
+		st_Session *_pSession = SessionAcquireLock(pSession->iClientNo);
 		if (nullptr == _pSession)
 		{
 			return;
@@ -689,7 +689,7 @@ void CNetServer::CompleteRecv(st_Session *pSession, DWORD dwTransfered)
 
 		_pPacket->PopData(sizeof(CPacket::st_PACKET_HEADER));
 
-		OnRecv(pSession->iSessionKey, _pPacket);
+		OnRecv(pSession->iClientNo, _pPacket);
 		_pPacket->Free();
 	}
 	RecvPost(pSession);

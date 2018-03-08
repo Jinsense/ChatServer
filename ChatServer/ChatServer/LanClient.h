@@ -57,15 +57,13 @@ private:
 	void CompleteRecv(DWORD dwTransfered);
 	void CompleteSend(DWORD dwTransfered);
 public:
-
+	bool					bConnect;
+	long					m_iRecvPacketTPS;
+	long					m_iSendPacketTPS;
 
 private:
 	long					SendFlag;
 	long					Send_Count;
-	bool					bConnect;
-
-	long					m_iRecvPacketTPS;
-	long					m_iSendPacketTPS;
 
 	OVERLAPPED				SendOver, RecvOver;
 	CRingBuffer				RecvQ, PacketQ;

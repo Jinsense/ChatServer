@@ -10,6 +10,8 @@
 CChatServer::CChatServer()
 {
 	m_bClose = false;
+	m_SessionMiss = 0;
+	m_SessionNotFound = 0;
 	m_iUpdateTPS = 0;
 	m_hThread[0] = m_hHeartBeatThread;
 	m_hThread[1] = m_hUpdateThread;
@@ -17,6 +19,7 @@ CChatServer::CChatServer()
 	m_hUpdateThread = (HANDLE)_beginthreadex(NULL, 0, &UpdateThread, (LPVOID)this, 0, NULL);
 	m_Event = CreateEvent(NULL, false, false, NULL);
 
+	InitializeSRWLock(&m_KeyTable_srw);
 	m_LoginLanClient = new CLanClientManager;
 	m_LoginLanClient->Constructor(this);
 	m_PlayerPool = new CMemoryPool<PLAYER>();
@@ -50,7 +53,7 @@ void CChatServer::OnClientJoin(st_SessionInfo Info)
 void CChatServer::OnClientLeave(unsigned __int64 iClientNo)
 {
 	st_SessionInfo Info;
-	Info.iSessionKey = iClientNo;
+	Info.iClientNo = iClientNo;
 	UPMSG *pMsg = m_UpdateMessagePool->Alloc();
 	pMsg->iMsgType = UPDATE_LEAVE;
 	pMsg->ClientInfo = Info;
@@ -76,7 +79,7 @@ bool CChatServer::OnRecv(unsigned __int64 iClientNo, CPacket *pPacket)
 	m_iRecvPacketTPS++;
 
 	st_SessionInfo Info;
-	Info.iSessionKey = iClientNo;
+	Info.iClientNo = iClientNo;
 	UPMSG *pMsg = m_UpdateMessagePool->Alloc();
 	pMsg->iMsgType = UPDATE_PACKET;
 	pMsg->ClientInfo = Info;
@@ -125,23 +128,29 @@ void CChatServer::MonitorThread_Update()
 			wprintf(L"	Player_AllocCount		:	%d	\n", m_PlayerPool->GetAllocCount());
 			wprintf(L"	Player_UseCount			:	%d	\n\n", m_PlayerPool->GetUseCount());
 
-			//	로그인세션키 - 미사용	
-			wprintf(L"	LoginSessionKey			:	%d	\n\n", 0);
+			//	로그인세션키	
+			wprintf(L"	LoginSessionKey			:	%d	\n\n", m_KeyTable.size());
 			wprintf(L"	Accept_Total			:	%I64d	\n", m_iAcceptTotal);
 			wprintf(L"	Accept_TPS			:	%I64d	\n", m_iAcceptTPS);
 			wprintf(L"	Update_TPS			:	%I64d	\n", m_iUpdateTPS);
 			wprintf(L"	SendPacket_TPS			:	%I64d	\n", m_iSendPacketTPS);
 			wprintf(L"	RecvPacket_TPS			:	%I64d	\n\n", m_iRecvPacketTPS);
 
+			//	LanServer
+			wprintf(L"	LanServer_SendPacket_TPS		:	%d	\n", m_LoginLanClient->m_iSendPacketTPS);
+			wprintf(L"	LanServer_RecvPacket_TPS		:	%d	\n\n", m_LoginLanClient->m_iRecvPacketTPS);
+
 			//	세션miss - 미사용
-			wprintf(L"	SessionMiss			:	%d	\n", 0);
+			wprintf(L"	SessionMiss			:	%d	\n", m_SessionMiss);
 			//	세션notfound - 미사용
-			wprintf(L"	SessionNotFound			:	%d	\n\n", 0);
+			wprintf(L"	SessionNotFound			:	%d	\n\n", m_SessionNotFound);
 		}
 		m_iAcceptTPS = 0;
 		m_iRecvPacketTPS = 0;
 		m_iSendPacketTPS = 0;
 		m_iUpdateTPS = 0;
+		m_LoginLanClient->m_iRecvPacketTPS = 0;
+		m_LoginLanClient->m_iSendPacketTPS = 0;
 	}
 	delete _t;
 }
@@ -191,13 +200,46 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 			pPacket->PopData((char*)pPlayer->Nickname, sizeof(pPlayer->Nickname));
 			pPacket->PopData((char*)pPlayer->SessionKey, sizeof(pPlayer->SessionKey));
 
-			CPacket *pNewPacket = CPacket::Alloc();
-			WORD Type = en_PACKET_CS_CHAT_RES_LOGIN;
-			BYTE Status = 1;
-			INT64 AccountNo = pPlayer->AccountNo;
-			*pNewPacket << Type << Status << AccountNo;
-			SendPacket(iClientNo, pNewPacket);
-			pNewPacket->Free();
+			//	세션키 테이블에서 세션키 검색
+			bool bFind = false;
+			list<KEY>::iterator iter;
+			AcquireSRWLockExclusive(&m_KeyTable_srw);
+			for (iter = m_KeyTable.begin(); iter != m_KeyTable.end(); iter++)
+			{
+				if (pPlayer->AccountNo == (*iter).AccountNo && pPlayer->SessionKey == (*iter).SessionKey)
+				{
+					m_KeyTable.erase(iter);
+					bFind = true;
+					break;
+				}
+				else if (pPlayer->AccountNo == (*iter).AccountNo && pPlayer->SessionKey != (*iter).SessionKey)
+				{
+					m_SessionMiss++;
+					break;
+				}
+				else if (iter == m_KeyTable.end())
+				{
+					m_SessionNotFound++;
+					break;
+				}
+			}
+			ReleaseSRWLockExclusive(&m_KeyTable_srw);
+
+			if (false == bFind)
+			{
+				Disconnect(pPlayer->ClientNo);
+			
+			}
+			else 
+			{
+				CPacket *pNewPacket = CPacket::Alloc();
+				WORD Type = en_PACKET_CS_CHAT_RES_LOGIN;
+				BYTE Status = 1;
+				INT64 AccountNo = pPlayer->AccountNo;
+				*pNewPacket << Type << Status << AccountNo;
+				SendPacket(iClientNo, pNewPacket);
+				pNewPacket->Free();
+			}
 		}
 	}
 	break;
@@ -420,7 +462,7 @@ void CChatServer::UpdateThread_Update()
 			case UPDATE_JOIN:
 			{
 				PLAYER *pPlayer = m_PlayerPool->Alloc();
-				pPlayer->ClientNo = pMsg->ClientInfo.iSessionKey;
+				pPlayer->ClientNo = pMsg->ClientInfo.iClientNo;
 				pPlayer->ClientIP = pMsg->ClientInfo.SessionIP;
 				pPlayer->ClientPort = pMsg->ClientInfo.SessionPort;
 				pPlayer->LastRecvPacket = GetTickCount64();
@@ -429,23 +471,29 @@ void CChatServer::UpdateThread_Update()
 			break;
 			case UPDATE_LEAVE:
 			{
-				PLAYER *pPlayer = FindPlayer(pMsg->ClientInfo.iSessionKey);
+				PLAYER *pPlayer = FindPlayer(pMsg->ClientInfo.iClientNo);
 				if (nullptr == pPlayer)
 				{
 					m_Log->Log(const_cast<WCHAR*>(L"Debug"), LOG_SYSTEM,
-						const_cast<WCHAR*>(L"UPDATE_LEAVE - Session Not Find [SessionKey : %d]"), pMsg->ClientInfo.iSessionKey);
+						const_cast<WCHAR*>(L"UPDATE_LEAVE - Session Not Find [SessionKey : %d]"), pMsg->ClientInfo.iClientNo);
 					break;
 				}
 				if (pPlayer->ClientPos.shX != 10000 && pPlayer->ClientPos.shY != 10000)
 					DeleteSectorPlayer(pPlayer->ClientPos.shX, pPlayer->ClientPos.shY, pPlayer->ClientNo);
-				m_Playermap.erase(pMsg->ClientInfo.iSessionKey);
+				m_Playermap.erase(pMsg->ClientInfo.iClientNo);
 				m_PlayerPool->Free(pPlayer);
 			}
 			break;
 			case UPDATE_PACKET:
 			{
-				PacketProc(pMsg->ClientInfo.iSessionKey, pMsg->pPacket);
+				PacketProc(pMsg->ClientInfo.iClientNo, pMsg->pPacket);
 				pMsg->pPacket->Free();
+			}
+			break;
+			case UPDATE_HEARTBEAT:
+			{
+				//	플레이어 리스트 처음부터 순회하여 일정시간 이상
+				//	경과한 플레이어접속 끊기
 			}
 			break;
 			default:

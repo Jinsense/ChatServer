@@ -14,6 +14,13 @@ using namespace std;
 #define		UPDATE_JOIN			1
 #define		UPDATE_LEAVE		2
 #define		UPDATE_PACKET		3
+#define		UPDATE_HEARTBEAT	4
+
+typedef struct st_SessionKey
+{
+	INT64	AccountNo;
+	CHAR	SessionKey[64];
+}KEY;
 
 typedef struct st_UPDATE_MESSAGE
 {
@@ -126,7 +133,11 @@ private:
 		pHeartBeatThread->HeartBeatThread_Update();
 		return true;
 	}
-	
+
+public:
+	list<KEY> m_KeyTable;
+	SRWLOCK m_KeyTable_srw;
+
 private:
 	map<unsigned __int64, PLAYER*> m_Playermap;
 	list<unsigned __int64> m_Sector[SECTOR_Y_MAX][SECTOR_X_MAX];
@@ -144,6 +155,9 @@ private:
 
 	unsigned __int64	m_iUpdateTPS;
 	bool	m_bClose;
+
+	long	m_SessionMiss;
+	long	m_SessionNotFound;
 };
 
 #endif _CHATSERVER_IOCP_CHATSERVER_H_
