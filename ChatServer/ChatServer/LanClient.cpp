@@ -5,6 +5,8 @@
 
 #include "LanClient.h"
 
+using namespace std;
+
 CLanClient::CLanClient() :
 	RecvQ(LANCLIENT_QUEUESIZE),
 	PacketQ(LANCLIENT_QUEUESIZE),
@@ -22,7 +24,7 @@ CLanClient::~CLanClient()
 
 }
 
-bool CLanClient::Connect(char * ServerIP, int Port, bool bNoDelay, int MaxWorkerThread)
+bool CLanClient::Connect(WCHAR * ServerIP, int Port, bool bNoDelay, int MaxWorkerThread)
 {
 	wprintf(L"[Client :: ClientInit]	Start\n");
 
@@ -57,10 +59,10 @@ bool CLanClient::Connect(char * ServerIP, int Port, bool bNoDelay, int MaxWorker
 	struct sockaddr_in client_addr;
 	ZeroMemory(&client_addr, sizeof(client_addr));
 	client_addr.sin_family = AF_INET;
-	InetPton(AF_INET, (PCWSTR)ServerIP, &client_addr.sin_addr);
+	InetPton(AF_INET, ServerIP, &client_addr.sin_addr.s_addr);
+
 	client_addr.sin_port = htons(Port);
 	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&bNoDelay, sizeof(bNoDelay));
-
 
 	retval = connect(sock, (SOCKADDR*)&client_addr, sizeof(client_addr));
 	if (retval == SOCKET_ERROR)
@@ -73,6 +75,7 @@ bool CLanClient::Connect(char * ServerIP, int Port, bool bNoDelay, int MaxWorker
 	CreateIoCompletionPort((HANDLE)sock, m_hIOCP, (ULONG_PTR)this, 0);
 
 	bConnect = true;
+	OnEnterJoinServer();
 	wprintf(L"[Client :: Connect]		Complete\n");
 	return true;
 }

@@ -36,7 +36,7 @@ CNetServer::~CNetServer()
 
 }
 
-bool CNetServer::ServerStart(const char *pOpenIP, int iPort, int iMaxWorkerThread,
+bool CNetServer::ServerStart(WCHAR *pOpenIP, int iPort, int iMaxWorkerThread,
 					bool bNodelay, int iMaxSession)
 {
 	wprintf(L"[Server :: Server_Start]	Start\n");
@@ -709,7 +709,7 @@ void CNetServer::CompleteSend(st_Session *pSession, DWORD dwTransfered)
 		InterlockedDecrement(&pSession->lSendCount);
 	}
 
-	if (true == pSession->lDisConnect && 0 == pSession->SendQ.GetUseCount)
+	if (true == pSession->lDisConnect && 0 == pSession->SendQ.GetUseCount())
 	{
 		ClientShutdown(pSession);
 		return;

@@ -244,6 +244,20 @@ bool CINIParse::GetValue(const char *szName, float *fpValue)
 	return false;
 }
 
+void CINIParse::UTF8toUTF16(const char *szText, WCHAR *szBuf, int iBufLen)
+{
+	int iRe = MultiByteToWideChar(CP_UTF8, 0, szText, strlen(szText), szBuf, iBufLen);
+	if (iRe < iBufLen)
+		szBuf[iRe] = L'\0';
+	return;
+}
+
+void CINIParse::UTF16toUTF8(WCHAR *szText, char *szBuf, int iBufLen)
+{
+	int iRe = WideCharToMultiByte(CP_UTF8, 0, szText, lstrlenW(szText), szBuf, iBufLen, NULL, NULL);
+	return;
+}
+
 bool CINIParse::SkipNoneCommand()
 {
 	char *chpBuffer;

@@ -21,6 +21,9 @@ public:
 	bool	GetValue(const char *szName, int *ipValue);
 	bool	GetValue(const char *szName, float *fpValue);
 
+	void	UTF8toUTF16(const char *szText, WCHAR *szBuf, int iBufLen);
+	void	UTF16toUTF8(WCHAR *szText, char *szBuf, int iBufLen);
+
 protected:
 	bool	SkipNoneCommand();
 	bool	GetNextWord(char **chppBuffer, int *ipLength);

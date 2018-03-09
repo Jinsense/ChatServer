@@ -7,7 +7,7 @@ class CConfig
 {
 	enum eNumConfig
 	{
-		eNUM_BUF = 100,
+		eNUM_BUF = 20,
 	};
 public:
 	CConfig();
@@ -20,15 +20,15 @@ public:
 	int PACKET_KEY1;
 	int PACKET_KEY2;
 
-	char BIND_IP[20];
+	WCHAR BIND_IP[20];
 	int BIND_IP_SIZE;
 	int BIND_PORT;
 
-	char LOGIN_SERVER_IP[20];
+	WCHAR LOGIN_SERVER_IP[20];
 	int LOGIN_IP_SIZE;
 	int LOGIN_SERVER_PORT;
 
-	char MONITORING_SERVER_IP[20];
+	WCHAR MONITORING_SERVER_IP[20];
 	int MONITORING_IP_SIZE;
 	int MONITORING_SERVER_PORT;
 
@@ -37,6 +37,9 @@ public:
 	int TIMEOUT_TIME;
 
 	CINIParse _Parse;
+
+private:
+	char IP[20];
 };
 
 #endif _CHATSERVER_PARSE_CONFIG_H_

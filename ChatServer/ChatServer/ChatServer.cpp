@@ -517,7 +517,7 @@ void CChatServer::HeartBeatThread_Update()
 	return;
 }
 
-bool CChatServer::LoginServerConnect(char * ServerIP, int Port, bool NoDelay, int MaxWorkerThread)
+bool CChatServer::LoginServerConnect(WCHAR * ServerIP, int Port, bool NoDelay, int MaxWorkerThread)
 {
 	return m_LoginLanClient->Connect(ServerIP, Port, NoDelay, MaxWorkerThread);
 }

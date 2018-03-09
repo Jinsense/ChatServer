@@ -8,7 +8,7 @@ CConfig::CConfig()
 	PACKET_KEY1 = NULL;
 	PACKET_KEY2 = NULL;
 
-	ZeroMemory(&BIND_IP, sizeof(BIND_IP));
+	ZeroMemory(&BIND_IP, sizeof(BIND_IP)); 
 	BIND_IP_SIZE = eNUM_BUF;
 	BIND_PORT = NULL;
 
@@ -23,6 +23,8 @@ CConfig::CConfig()
 	WORKER_THREAD = NULL;
 	CLIENT_MAX = NULL;
 	TIMEOUT_TIME = NULL;
+
+	ZeroMemory(&IP, sizeof(IP));
 }
 
 CConfig::~CConfig()
@@ -42,7 +44,8 @@ bool CConfig::Set()
 	_Parse.GetValue("PACKET_KEY2", &PACKET_KEY2);
 
 	_Parse.ProvideArea("CLIENT_BIND");
-	_Parse.GetValue("BIND_IP", &BIND_IP[0], &BIND_IP_SIZE);
+	_Parse.GetValue("BIND_IP", &IP[0], &BIND_IP_SIZE);
+	_Parse.UTF8toUTF16(IP, BIND_IP, sizeof(BIND_IP));
 	_Parse.GetValue("BIND_PORT", &BIND_PORT);
 
 	res = _Parse.ProvideArea("CHAT_SERVER");
@@ -55,11 +58,13 @@ bool CConfig::Set()
 	_Parse.GetValue("TIMEOUT_TIME", &TIMEOUT_TIME);
 
 	_Parse.ProvideArea("LOGIN_SERVER");
-	_Parse.GetValue("LOGIN_SERVER_IP", &LOGIN_SERVER_IP[0], &LOGIN_IP_SIZE);
+	_Parse.GetValue("LOGIN_SERVER_IP", &IP[0], &LOGIN_IP_SIZE);
+	_Parse.UTF8toUTF16(IP, LOGIN_SERVER_IP, sizeof(LOGIN_SERVER_IP));
 	_Parse.GetValue("LOGIN_SERVER_PORT", &LOGIN_SERVER_PORT);
 
 	_Parse.ProvideArea("MONITORING_SERVER");
-	_Parse.GetValue("MONITORING_SERVER_IP", &MONITORING_SERVER_IP[0], &MONITORING_IP_SIZE);
+	_Parse.GetValue("MONITORING_SERVER_IP", &IP[0], &MONITORING_IP_SIZE);
+	_Parse.UTF8toUTF16(IP, MONITORING_SERVER_IP, sizeof(MONITORING_SERVER_IP));
 	_Parse.GetValue("MONITORING_SERVER_PORT", &MONITORING_SERVER_PORT);
 
 	return true;
