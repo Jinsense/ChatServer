@@ -150,14 +150,20 @@ void CPacket::SetHeader_CustomHeader(char *pHeader, int iCustomHeaderSize)
 	int iSize = static_cast<int>(en_PACKETDEFINE::HEADER_SIZE) - iCustomHeaderSize;
 	memcpy_s(&m_chBuffer[iSize], static_cast<int>(en_PACKETDEFINE::HEADER_SIZE), 
 		pHeader, iCustomHeaderSize);
+
+	m_pReadPos += static_cast<int>(en_PACKETDEFINE::HEADER_SIZE) - iCustomHeaderSize;
+	return;
 }
 
 void CPacket::SetHeader_CustomShort(unsigned short shHeader)
 {
 	if (true == InterlockedCompareExchange(&m_lHeaderSetFlag, true, false))
 		return;
-	memcpy_s(&m_chBuffer, static_cast<int>(en_PACKETDEFINE::SHORT_HEADER_SIZE), 
+	memcpy_s(&m_chBuffer[3], static_cast<int>(en_PACKETDEFINE::SHORT_HEADER_SIZE), 
 		&shHeader, static_cast<int>(en_PACKETDEFINE::SHORT_HEADER_SIZE));
+	
+	m_pReadPos += 3;
+	return;
 }
 
 void CPacket::EnCode()

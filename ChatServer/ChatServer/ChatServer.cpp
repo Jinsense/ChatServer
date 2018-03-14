@@ -108,7 +108,7 @@ void CChatServer::MonitorThread_Update()
 	int min = _t->tm_min;
 	int sec = _t->tm_sec;
 
-	while (m_bShutdown)
+	while (!m_bShutdown)
 	{
 		Sleep(1000);
 		_timer = time(NULL);
@@ -137,8 +137,8 @@ void CChatServer::MonitorThread_Update()
 			wprintf(L"	RecvPacket_TPS			:	%I64d	\n\n", m_iRecvPacketTPS);
 
 			//	LanServer
-			wprintf(L"	LanServer_SendPacket_TPS		:	%d	\n", m_LoginLanClient->m_iSendPacketTPS);
-			wprintf(L"	LanServer_RecvPacket_TPS		:	%d	\n\n", m_LoginLanClient->m_iRecvPacketTPS);
+			wprintf(L"	LanServer_SendPacket_TPS	:	%d	\n", m_LoginLanClient->m_iSendPacketTPS);
+			wprintf(L"	LanServer_RecvPacket_TPS	:	%d	\n\n", m_LoginLanClient->m_iRecvPacketTPS);
 
 			//	세션miss - 미사용
 			wprintf(L"	SessionMiss			:	%d	\n", m_SessionMiss);

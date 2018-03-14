@@ -64,12 +64,16 @@ bool CLanClient::Connect(WCHAR * ServerIP, int Port, bool bNoDelay, int MaxWorke
 	client_addr.sin_port = htons(Port);
 	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&bNoDelay, sizeof(bNoDelay));
 
-	retval = connect(sock, (SOCKADDR*)&client_addr, sizeof(client_addr));
-	if (retval == SOCKET_ERROR)
+	while (1)
 	{
-		//	·Î±×
-		g_CrashDump->Crash();
-		return false;
+		retval = connect(sock, (SOCKADDR*)&client_addr, sizeof(client_addr));
+		if (retval == SOCKET_ERROR)
+		{
+			wprintf(L"[Client :: Connect]		Login_LanServer Not Connect\n");
+			Sleep(1000);
+			continue;
+		}
+		break;
 	}
 
 	CreateIoCompletionPort((HANDLE)sock, m_hIOCP, (ULONG_PTR)this, 0);
@@ -124,6 +128,8 @@ bool CLanClient::IsConnect()
 bool CLanClient::SendPacket(CPacket *pPacket)
 {
 	m_iSendPacketTPS++;
+	pPacket->AddRef();
+	pPacket->SetHeader_CustomShort(pPacket->GetDataSize());
 	SendQ.Enqueue(pPacket);
 	SendPost();
 
@@ -140,7 +146,7 @@ void CLanClient::WorkerThread_Update()
 		OVERLAPPED * pOver = NULL;
 		DWORD Trans = 0;
 
-		retval = GetQueuedCompletionStatus(m_hIOCP, &Trans, NULL, (LPWSAOVERLAPPED*)&pOver, INFINITE);
+		retval = GetQueuedCompletionStatus(m_hIOCP, &Trans, (PULONG_PTR)this, (LPWSAOVERLAPPED*)&pOver, INFINITE);
 		//		OnWorkerThreadBegin();
 
 		if (nullptr == pOver)
@@ -208,6 +214,7 @@ void CLanClient::CompleteRecv(DWORD dwTransfered)
 		}
 		RecvQ.Dequeue(_pPacket->GetWritePtr(), _wPayloadSize);
 		_pPacket->PushData(_wPayloadSize);
+		_pPacket->PopData(sizeof(CPacket::st_PACKET_HEADER));
 
 		m_iRecvPacketTPS++;
 		OnRecv(_pPacket);
@@ -304,8 +311,8 @@ void CLanClient::SendPost()
 			{
 				SendQ.Dequeue(pPacket);
 				PacketQ.Enqueue((char*)&pPacket, sizeof(CPacket*));
-				wsaBuf[i].buf = pPacket->GetBufferPtr();
-				wsaBuf[i].len = pPacket->GetPacketSize();
+				wsaBuf[i].buf = pPacket->GetReadPtr();
+				wsaBuf[i].len = pPacket->GetPacketSize_CustomHeader(LANCLIENT_HEADERSIZE);
 			}
 		}
 		else
@@ -318,8 +325,8 @@ void CLanClient::SendPost()
 			{
 				SendQ.Dequeue(pPacket);
 				PacketQ.Enqueue((char*)&pPacket, sizeof(CPacket*));
-				wsaBuf[i].buf = pPacket->GetBufferPtr();
-				wsaBuf[i].len = pPacket->GetPacketSize();
+				wsaBuf[i].buf = pPacket->GetReadPtr();
+				wsaBuf[i].len = pPacket->GetPacketSize_CustomHeader(LANCLIENT_HEADERSIZE);
 			}
 		}
 		ZeroMemory(&SendOver, sizeof(SendOver));
