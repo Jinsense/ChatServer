@@ -7,6 +7,7 @@
 #include "Packet.h"
 #include "RingBuffer.h"
 #include "LockFreeQueue.h"
+#include "CommonProtocol.h"
 
 #define LANCLIENT_WORKERTHREAD	2
 #define LANCLIENT_WSABUFNUM		300
@@ -14,7 +15,7 @@
 
 #define LANCLIENT_HEADERSIZE	2
 
-
+class CChatServer;
 
 class CLanClient
 {
@@ -27,16 +28,18 @@ public:
 	bool IsConnect();
 	bool SendPacket(CPacket *pPacket);
 
-	virtual void OnEnterJoinServer() = 0;		//	서버와의 연결 성공 후
-	virtual void OnLeaveServer() = 0;			//	서버와의 연결이 끊어졌을 때
+	void Constructor(CChatServer *pChat);
 
-	virtual void OnRecv(CPacket *pPacket) = 0;	//	하나의 패킷 수신 완료 후
-	virtual void OnSend(int SendSize) = 0;		//	패킷 송신 완료 후
+	void OnEnterJoinServer();		//	서버와의 연결 성공 후
+	void OnLeaveServer();			//	서버와의 연결이 끊어졌을 때
 
-	virtual void OnWorkerThreadBegin() = 0;
-	virtual void OnWorkerThreadEnd() = 0;
+	void OnLanRecv(CPacket *pPacket);	//	하나의 패킷 수신 완료 후
+	void OnLanSend(int SendSize);		//	패킷 송신 완료 후
 
-	virtual void OnError(int ErrorCode, WCHAR *pMsg) = 0;
+	void OnWorkerThreadBegin();
+	void OnWorkerThreadEnd();
+
+	void OnError(int ErrorCode, WCHAR *pMsg);
 
 private:
 	static unsigned int WINAPI WorkerThread(LPVOID arg)
@@ -73,6 +76,7 @@ private:
 	HANDLE					m_hIOCP;
 	HANDLE					m_hWorker_Thread[10];
 
+	CChatServer *			pChatServer;
 };
 
 #endif _CHATSERVER_CLIENT_LANCLIENT_H_

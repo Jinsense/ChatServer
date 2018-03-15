@@ -142,7 +142,7 @@ bool CINIParse::GetValue(const char *szName, char *szValue, int *ipBuffSize)
 						if (*ipBuffSize <= iLength)
 							return false;
 
-						memset(szValue, 0, *ipBuffSize);
+						memset(szValue, 0, iLength);
 						memcpy(szValue, chpBuff, iLength);
 
 						*ipBuffSize = iLength;

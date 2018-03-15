@@ -29,6 +29,7 @@ CNetServer::CNetServer()
 
 	m_Log = m_Log->GetInstance();
 	InitializeSRWLock(&m_srw);
+	CPacket::MemoryPoolInit();
 }
 
 CNetServer::~CNetServer()
@@ -44,8 +45,6 @@ bool CNetServer::ServerStart(WCHAR *pOpenIP, int iPort, int iMaxWorkerThread,
 	int _iRetval = 0;
 	setlocale(LC_ALL, "Korean");
 	InitializeCriticalSection(&m_SessionCS);
-
-	CPacket::MemoryPoolInit();
 
 	pSessionArray = new st_Session[iMaxSession];
 	

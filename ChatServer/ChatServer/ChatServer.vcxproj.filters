@@ -55,9 +55,6 @@
     <ClCompile Include="LanClient.cpp">
       <Filter>LanClient</Filter>
     </ClCompile>
-    <ClCompile Include="LanClientManager.cpp">
-      <Filter>LanClient</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="APIHook.h">
@@ -100,9 +97,6 @@
       <Filter>Parse</Filter>
     </ClInclude>
     <ClInclude Include="LanClient.h">
-      <Filter>LanClient</Filter>
-    </ClInclude>
-    <ClInclude Include="LanClientManager.h">
       <Filter>LanClient</Filter>
     </ClInclude>
   </ItemGroup>

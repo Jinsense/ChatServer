@@ -23,18 +23,18 @@ int main()
 
 	GetSystemInfo(&_SysInfo);
 		
+	if (false == _ChatServer.LoginServerConnect(_Config.LOGIN_SERVER_IP, _Config.LOGIN_SERVER_PORT,
+		true, 2))
+	{
+		wprintf(L"[Main :: LanClientConnect] Connect Error\n");
+		return 0;
+	}
+
 	if (false == _ChatServer.ServerStart(_Config.BIND_IP, _Config.BIND_PORT,
 				_Config.WORKER_THREAD, true, 
 				_Config.CLIENT_MAX))
 	{
 		wprintf(L"[Main :: Server_Start] Error\n");
-		return 0;
-	}
-
-	if (false == _ChatServer.LoginServerConnect(_Config.LOGIN_SERVER_IP, _Config.LOGIN_SERVER_PORT,
-		true, 2))
-	{
-		wprintf(L"[Main :: LanClientConnect] Connect Error\n");
 		return 0;
 	}
 

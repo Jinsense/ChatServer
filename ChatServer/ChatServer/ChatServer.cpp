@@ -1,10 +1,9 @@
 #include <time.h>
 #include <process.h>
 
-//#include "LanClientManager.h"
-#include "ChatServer.h"
 #include "CommonProtocol.h"
-#include "LanClientManager.h"
+#include "LanClient.h"
+#include "ChatServer.h"
 
 
 CChatServer::CChatServer()
@@ -20,10 +19,10 @@ CChatServer::CChatServer()
 	m_Event = CreateEvent(NULL, false, false, NULL);
 
 	InitializeSRWLock(&m_KeyTable_srw);
-	m_LoginLanClient = new CLanClientManager;
-	m_LoginLanClient->Constructor(this);
 	m_PlayerPool = new CMemoryPool<PLAYER>();
 	m_UpdateMessagePool = new CMemoryPool<UPMSG>();
+	m_LoginLanClient = new CLanClient;
+	m_LoginLanClient->Constructor(this);
 }
 
 CChatServer::~CChatServer()

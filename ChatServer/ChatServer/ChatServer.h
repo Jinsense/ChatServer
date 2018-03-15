@@ -78,7 +78,7 @@ typedef struct st_PLAYER
 	ULONG64		LastRecvPacket;
 }PLAYER;
 
-class CLanClientManager;
+class CLanClient;
 
 class CChatServer : public CNetServer
 {
@@ -146,7 +146,7 @@ private:
 	CMemoryPool<UPMSG> *m_UpdateMessagePool;
 	CMemoryPool<PLAYER> *m_PlayerPool;
 
-	CLanClientManager *m_LoginLanClient;
+	CLanClient *m_LoginLanClient;
 
 	HANDLE	m_hThread[2];
 	HANDLE	m_hHeartBeatThread;
