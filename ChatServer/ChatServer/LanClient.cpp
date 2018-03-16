@@ -10,12 +10,12 @@
 using namespace std;
 
 CLanClient::CLanClient() :
-	RecvQ(LANCLIENT_QUEUESIZE),
-	PacketQ(LANCLIENT_QUEUESIZE),
-	SendFlag(false),
 	m_iRecvPacketTPS(NULL),
 	m_iSendPacketTPS(NULL)
 {
+	m_Session = new LANSESSION;
+
+
 	setlocale(LC_ALL, "Korean");
 
 	m_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 0);
@@ -23,7 +23,7 @@ CLanClient::CLanClient() :
 
 CLanClient::~CLanClient()
 {
-
+	delete m_Session;
 }
 
 void CLanClient::Constructor(CChatServer *pChat)
@@ -36,7 +36,7 @@ void CLanClient::OnEnterJoinServer()
 {
 	//	서버와의 연결 성공 후
 	CPacket *pPacket = CPacket::Alloc();
-	bConnect = true;
+	m_Session->bConnect = true;
 
 	WORD Type = en_PACKET_SS_LOGINSERVER_LOGIN;
 	BYTE ServerType = dfSERVER_TYPE_CHAT;
@@ -53,7 +53,7 @@ void CLanClient::OnEnterJoinServer()
 void CLanClient::OnLeaveServer()
 {
 	//	서버와의 연결이 끊어졌을 때
-	bConnect = false;
+	m_Session->bConnect = false;
 	return;
 }
 
@@ -115,9 +115,9 @@ bool CLanClient::Connect(WCHAR * ServerIP, int Port, bool bNoDelay, int MaxWorke
 {
 	wprintf(L"[Client :: ClientInit]	Start\n");
 
-	RecvQ.Clear();
-	PacketQ.Clear();
-	SendFlag = false;
+	m_Session->RecvQ.Clear();
+	m_Session->PacketQ.Clear();
+	m_Session->SendFlag = false;
 
 	for (auto i = 0; i < MaxWorkerThread; i++)
 	{
@@ -134,8 +134,8 @@ bool CLanClient::Connect(WCHAR * ServerIP, int Port, bool bNoDelay, int MaxWorke
 		return false;
 	}
 
-	sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
-	if (sock == INVALID_SOCKET)
+	m_Session->sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+	if (m_Session->sock == INVALID_SOCKET)
 	{
 		wprintf(L"[Client :: Connect]	WSASocket Error\n");
 		//	로그
@@ -149,11 +149,11 @@ bool CLanClient::Connect(WCHAR * ServerIP, int Port, bool bNoDelay, int MaxWorke
 	InetPton(AF_INET, ServerIP, &client_addr.sin_addr.s_addr);
 
 	client_addr.sin_port = htons(Port);
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&bNoDelay, sizeof(bNoDelay));
+	setsockopt(m_Session->sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&bNoDelay, sizeof(bNoDelay));
 
 	while (1)
 	{
-		retval = connect(sock, (SOCKADDR*)&client_addr, sizeof(client_addr));
+		retval = connect(m_Session->sock, (SOCKADDR*)&client_addr, sizeof(client_addr));
 		if (retval == SOCKET_ERROR)
 		{
 			wprintf(L"[Client :: Connect]		Login_LanServer Not Connect\n");
@@ -163,9 +163,9 @@ bool CLanClient::Connect(WCHAR * ServerIP, int Port, bool bNoDelay, int MaxWorke
 		break;
 	}
 
-	CreateIoCompletionPort((HANDLE)sock, m_hIOCP, (ULONG_PTR)this, 0);
+	CreateIoCompletionPort((HANDLE)m_Session->sock, m_hIOCP, (ULONG_PTR)this, 0);
 
-	bConnect = true;
+	m_Session->bConnect = true;
 	OnEnterJoinServer();
 	wprintf(L"[Client :: Connect]		Complete\n");
 	RecvPost();
@@ -174,27 +174,27 @@ bool CLanClient::Connect(WCHAR * ServerIP, int Port, bool bNoDelay, int MaxWorke
 
 bool CLanClient::Disconnect()
 {
-	closesocket(sock);
+	closesocket(m_Session->sock);
 
-	while (0 < SendQ.GetUseCount())
+	while (0 < m_Session->SendQ.GetUseCount())
 	{
 		CPacket * pPacket;
-		SendQ.Dequeue(pPacket);
+		m_Session->SendQ.Dequeue(pPacket);
 		if (pPacket == nullptr)
 			g_CrashDump->Crash();
 		pPacket->Free();
 	}
 
-	while (0 < PacketQ.GetUseSize())
+	while (0 < m_Session->PacketQ.GetUseSize())
 	{
 		CPacket * pPacket;
-		PacketQ.Peek((char*)&pPacket, sizeof(CPacket*));
+		m_Session->PacketQ.Peek((char*)&pPacket, sizeof(CPacket*));
 		if (pPacket == nullptr)
 			g_CrashDump->Crash();
 		pPacket->Free();
-		PacketQ.Dequeue(sizeof(CPacket*));
+		m_Session->PacketQ.Dequeue(sizeof(CPacket*));
 	}
-	bConnect = false;
+	m_Session->bConnect = false;
 
 	WaitForMultipleObjects(LANCLIENT_WORKERTHREAD, m_hWorker_Thread, false, INFINITE);
 
@@ -210,7 +210,7 @@ bool CLanClient::Disconnect()
 
 bool CLanClient::IsConnect()
 {
-	return bConnect;
+	return m_Session->bConnect;
 }
 
 bool CLanClient::SendPacket(CPacket *pPacket)
@@ -218,7 +218,7 @@ bool CLanClient::SendPacket(CPacket *pPacket)
 	m_iSendPacketTPS++;
 	pPacket->AddRef();
 	pPacket->SetHeader_CustomShort(pPacket->GetDataSize());
-	SendQ.Enqueue(pPacket);
+	m_Session->SendQ.Enqueue(pPacket);
 	SendPost();
 
 	return true;
@@ -232,9 +232,10 @@ void CLanClient::WorkerThread_Update()
 	{
 		//	초기화 필수
 		OVERLAPPED * pOver = NULL;
+		LANSESSION * pSession = NULL;
 		DWORD Trans = 0;
 
-		retval = GetQueuedCompletionStatus(m_hIOCP, &Trans, (PULONG_PTR)this, (LPWSAOVERLAPPED*)&pOver, INFINITE);
+		retval = GetQueuedCompletionStatus(m_hIOCP, &Trans, (PULONG_PTR)&pSession, (LPWSAOVERLAPPED*)&pOver, INFINITE);
 		//		OnWorkerThreadBegin();
 
 		if (nullptr == pOver)
@@ -261,11 +262,11 @@ void CLanClient::WorkerThread_Update()
 			//			shutdown(sock, SD_BOTH);
 			Disconnect();
 		}
-		else if (pOver == &RecvOver)
+		else if (pOver == &m_Session->RecvOver)
 		{
 			CompleteRecv(Trans);
 		}
-		else if (pOver == &SendOver)
+		else if (pOver == &m_Session->SendOver)
 		{
 			CompleteSend(Trans);
 		}
@@ -284,23 +285,23 @@ void CLanClient::WorkerThread_Update()
 
 void CLanClient::CompleteRecv(DWORD dwTransfered)
 {
-	RecvQ.Enqueue(dwTransfered);
+	m_Session->RecvQ.Enqueue(dwTransfered);
 	WORD _wPayloadSize = 0;
 
-	while (LANCLIENT_HEADERSIZE == RecvQ.Peek((char*)&_wPayloadSize, LANCLIENT_HEADERSIZE))
+	while (LANCLIENT_HEADERSIZE == m_Session->RecvQ.Peek((char*)&_wPayloadSize, LANCLIENT_HEADERSIZE))
 	{
 		CPacket *_pPacket = CPacket::Alloc();
-		if (RecvQ.GetUseSize() < LANCLIENT_HEADERSIZE + _wPayloadSize)
+		if (m_Session->RecvQ.GetUseSize() < LANCLIENT_HEADERSIZE + _wPayloadSize)
 			break;
 
-		RecvQ.Dequeue(LANCLIENT_HEADERSIZE);
+		m_Session->RecvQ.Dequeue(LANCLIENT_HEADERSIZE);
 
 		if (_pPacket->GetFreeSize() < _wPayloadSize)
 		{
 			Disconnect();
 			return;
 		}
-		RecvQ.Dequeue(_pPacket->GetWritePtr(), _wPayloadSize);
+		m_Session->RecvQ.Dequeue(_pPacket->GetWritePtr(), _wPayloadSize);
 		_pPacket->PushData(_wPayloadSize + sizeof(CPacket::st_PACKET_HEADER));
 		_pPacket->PopData(sizeof(CPacket::st_PACKET_HEADER));
 
@@ -314,16 +315,16 @@ void CLanClient::CompleteRecv(DWORD dwTransfered)
 void CLanClient::CompleteSend(DWORD dwTransfered)
 {
 	CPacket * pPacket[LANCLIENT_WSABUFNUM];
-	PacketQ.Peek((char*)&pPacket, sizeof(CPacket*) * Send_Count);
-	for (auto i = 0; i < Send_Count; i++)
+	m_Session->PacketQ.Peek((char*)&pPacket, sizeof(CPacket*) * m_Session->Send_Count);
+	for (auto i = 0; i < m_Session->Send_Count; i++)
 	{
 		if (pPacket == nullptr)
 			g_CrashDump->Crash();
 		pPacket[i]->Free();
-		PacketQ.Dequeue(sizeof(CPacket*));
+		m_Session->PacketQ.Dequeue(sizeof(CPacket*));
 	}
 
-	InterlockedExchange(&SendFlag, false);
+	InterlockedExchange(&m_Session->SendFlag, false);
 
 	SendPost();
 }
@@ -331,11 +332,11 @@ void CLanClient::CompleteSend(DWORD dwTransfered)
 void CLanClient::RecvPost()
 {
 	DWORD flags = 0;
-	ZeroMemory(&RecvOver, sizeof(RecvOver));
+	ZeroMemory(&m_Session->RecvOver, sizeof(m_Session->RecvOver));
 
 	WSABUF wsaBuf[2];
-	DWORD freeSize = RecvQ.GetFreeSize();
-	DWORD notBrokenPushSize = RecvQ.GetNotBrokenPushSize();
+	DWORD freeSize = m_Session->RecvQ.GetFreeSize();
+	DWORD notBrokenPushSize = m_Session->RecvQ.GetNotBrokenPushSize();
 	if (0 == freeSize && 0 == notBrokenPushSize)
 	{
 		//	로그
@@ -346,16 +347,16 @@ void CLanClient::RecvPost()
 
 	int numOfBuf = (notBrokenPushSize < freeSize) ? 2 : 1;
 
-	wsaBuf[0].buf = RecvQ.GetWriteBufferPtr();		//	Dequeue는 rear를 건드리지 않으므로 안전
+	wsaBuf[0].buf = m_Session->RecvQ.GetWriteBufferPtr();		//	Dequeue는 rear를 건드리지 않으므로 안전
 	wsaBuf[0].len = notBrokenPushSize;
 
 	if (2 == numOfBuf)
 	{
-		wsaBuf[1].buf = RecvQ.GetBufferPtr();
+		wsaBuf[1].buf = m_Session->RecvQ.GetBufferPtr();
 		wsaBuf[1].len = freeSize - notBrokenPushSize;
 	}
 
-	if (SOCKET_ERROR == WSARecv(sock, wsaBuf, numOfBuf, NULL, &flags, &RecvOver, NULL))
+	if (SOCKET_ERROR == WSARecv(m_Session->sock, wsaBuf, numOfBuf, NULL, &flags, &m_Session->RecvOver, NULL))
 	{
 		int lastError = WSAGetLastError();
 		if (ERROR_IO_PENDING != lastError)
@@ -376,29 +377,29 @@ void CLanClient::SendPost()
 {
 	do
 	{
-		if (true == InterlockedCompareExchange(&SendFlag, true, false))
+		if (true == InterlockedCompareExchange(&m_Session->SendFlag, true, false))
 			return;
 
-		if (0 == SendQ.GetUseCount())
+		if (0 == m_Session->SendQ.GetUseCount())
 		{
-			InterlockedExchange(&SendFlag, false);
+			InterlockedExchange(&m_Session->SendFlag, false);
 			return;
 		}
 
 		WSABUF wsaBuf[LANCLIENT_WSABUFNUM];
 		CPacket *pPacket;
 		long BufNum = 0;
-		int iUseSize = (SendQ.GetUseCount());
+		int iUseSize = (m_Session->SendQ.GetUseCount());
 		if (iUseSize > LANCLIENT_WSABUFNUM)
 		{
 			//	SendQ에 패킷이 100개 이상있을때, WSABUF에 100개만 넣는다.
 			BufNum = LANCLIENT_WSABUFNUM;
-			Send_Count = LANCLIENT_WSABUFNUM;
+			m_Session->Send_Count = LANCLIENT_WSABUFNUM;
 			//	pSession->SendQ.Peek((char*)&pPacket, sizeof(CPacket*) * MAX_WSABUF_NUMBER);
 			for (auto i = 0; i < LANCLIENT_WSABUFNUM; i++)
 			{
-				SendQ.Dequeue(pPacket);
-				PacketQ.Enqueue((char*)&pPacket, sizeof(CPacket*));
+				m_Session->SendQ.Dequeue(pPacket);
+				m_Session->PacketQ.Enqueue((char*)&pPacket, sizeof(CPacket*));
 				wsaBuf[i].buf = pPacket->GetReadPtr();
 				wsaBuf[i].len = pPacket->GetPacketSize_CustomHeader(LANCLIENT_HEADERSIZE);
 			}
@@ -407,18 +408,18 @@ void CLanClient::SendPost()
 		{
 			//	SendQ에 패킷이 100개 이하일 때 현재 패킷을 계산해서 넣는다
 			BufNum = iUseSize;
-			Send_Count = iUseSize;
+			m_Session->Send_Count = iUseSize;
 			//			pSession->SendQ.Peek((char*)&pPacket, sizeof(CPacket*) * iUseSize);
 			for (auto i = 0; i < iUseSize; i++)
 			{
-				SendQ.Dequeue(pPacket);
-				PacketQ.Enqueue((char*)&pPacket, sizeof(CPacket*));
+				m_Session->SendQ.Dequeue(pPacket);
+				m_Session->PacketQ.Enqueue((char*)&pPacket, sizeof(CPacket*));
 				wsaBuf[i].buf = pPacket->GetReadPtr();
 				wsaBuf[i].len = pPacket->GetPacketSize_CustomHeader(LANCLIENT_HEADERSIZE);
 			}
 		}
-		ZeroMemory(&SendOver, sizeof(SendOver));
-		if (SOCKET_ERROR == WSASend(sock, wsaBuf, BufNum, NULL, 0, &SendOver, NULL))
+		ZeroMemory(&m_Session->SendOver, sizeof(m_Session->SendOver));
+		if (SOCKET_ERROR == WSASend(m_Session->sock, wsaBuf, BufNum, NULL, 0, &m_Session->SendOver, NULL))
 		{
 			int lastError = WSAGetLastError();
 			if (ERROR_IO_PENDING != lastError)
@@ -432,5 +433,5 @@ void CLanClient::SendPost()
 				break;
 			}
 		}
-	} while (0 != SendQ.GetUseCount());
+	} while (0 != m_Session->SendQ.GetUseCount());
 }

@@ -21,6 +21,7 @@ CChatServer::CChatServer()
 	InitializeSRWLock(&m_KeyTable_srw);
 	m_PlayerPool = new CMemoryPool<PLAYER>();
 	m_UpdateMessagePool = new CMemoryPool<UPMSG>();
+	int iSize = sizeof(CLanClient);
 	m_LoginLanClient = new CLanClient;
 	m_LoginLanClient->Constructor(this);
 }
@@ -144,6 +145,7 @@ void CChatServer::MonitorThread_Update()
 			//	세션notfound - 미사용
 			wprintf(L"	SessionNotFound			:	%d	\n\n", m_SessionNotFound);
 		}
+				
 		m_iAcceptTPS = 0;
 		m_iRecvPacketTPS = 0;
 		m_iSendPacketTPS = 0;
@@ -205,13 +207,13 @@ bool CChatServer::PacketProc(unsigned __int64 iClientNo, CPacket *pPacket)
 			AcquireSRWLockExclusive(&m_KeyTable_srw);
 			for (iter = m_KeyTable.begin(); iter != m_KeyTable.end(); iter++)
 			{
-				if (pPlayer->AccountNo == (*iter).AccountNo && pPlayer->SessionKey == (*iter).SessionKey)
+				if (pPlayer->AccountNo == (*iter).AccountNo && strcmp(pPlayer->SessionKey, (*iter).SessionKey))
 				{
 					m_KeyTable.erase(iter);
 					bFind = true;
 					break;
 				}
-				else if (pPlayer->AccountNo == (*iter).AccountNo && pPlayer->SessionKey != (*iter).SessionKey)
+				else if (pPlayer->AccountNo == (*iter).AccountNo && !strcmp(pPlayer->SessionKey, (*iter).SessionKey))
 				{
 					m_SessionMiss++;
 					break;

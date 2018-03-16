@@ -15,6 +15,23 @@
 
 #define LANCLIENT_HEADERSIZE	2
 
+typedef struct st_Client
+{
+	bool		bConnect;
+	long		SendFlag;
+	long		Send_Count;
+
+	OVERLAPPED				SendOver, RecvOver;
+	CRingBuffer				RecvQ, PacketQ;
+	CLockFreeQueue<CPacket*> SendQ;
+	SOCKET					sock;
+
+	st_Client() :
+		RecvQ(LANCLIENT_QUEUESIZE),
+		PacketQ(LANCLIENT_QUEUESIZE),
+		SendFlag(false) {}
+}LANSESSION;
+
 class CChatServer;
 
 class CLanClient
@@ -59,24 +76,18 @@ private:
 	void SendPost();
 	void CompleteRecv(DWORD dwTransfered);
 	void CompleteSend(DWORD dwTransfered);
+
 public:
-	bool					bConnect;
-	long					m_iRecvPacketTPS;
-	long					m_iSendPacketTPS;
+	long		m_iRecvPacketTPS;
+	long		m_iSendPacketTPS;
+	LANSESSION	*m_Session;
 
 private:
-	long					SendFlag;
-	long					Send_Count;
-
-	OVERLAPPED				SendOver, RecvOver;
-	CRingBuffer				RecvQ, PacketQ;
-	CLockFreeQueue<CPacket*> SendQ;
-	SOCKET					sock;
-
 	HANDLE					m_hIOCP;
 	HANDLE					m_hWorker_Thread[10];
 
 	CChatServer *			pChatServer;
+
 };
 
 #endif _CHATSERVER_CLIENT_LANCLIENT_H_
